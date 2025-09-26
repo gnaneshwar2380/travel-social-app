@@ -16,6 +16,7 @@ const Signup = () => {
         try {
             await axios.post('http://127.0.0.1:8000/api/user/register/', {
                 username,
+                email,
                 password,
             });
             alert('Registration successful! Please log in.');
@@ -28,7 +29,7 @@ const Signup = () => {
     return (
         <div className="flex w-full min-h-screen font-sans">
             {/* Image Section */}
-            <div className="hidden lg:flex w-1/2 items-center justify-center bg-gray-100 p-12">
+            <div className="hidden lg:flex w-1/2  bg-gray-100 p-12">
                 <div className="relative w-full max-w-lg flex items-center justify-center">
                     <img src={image2} alt="Travel" className="absolute w-64 h-auto rounded-2xl shadow-lg transform -rotate-15 top-0 left-0" />
                     <img src={image1} alt="Travel" className="relative w-72 h-auto rounded-2xl shadow-lg z-10" />
@@ -54,7 +55,7 @@ const Signup = () => {
                         </div>
                         <div className="mb-4">
                         <input
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
