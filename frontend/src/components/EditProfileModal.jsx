@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../api'; 
 
 // 1. Accept the new onUploadSuccess function as a prop
 const EditProfileModal = ({ onClose, onUploadSuccess }) => {
@@ -22,7 +22,7 @@ const EditProfileModal = ({ onClose, onUploadSuccess }) => {
 
         try {
             const token = localStorage.getItem('access_token');
-            await axios.patch('http://127.0.0.1:8000/api/profile/update/', formData, {
+            await api.patch('/api/profile/update/', formData, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data',

@@ -1,20 +1,44 @@
 # backend/api/views.py
-
-from django.db.models import Count
-from django.contrib.auth.models import User
+# backend/api/views.py
 from rest_framework import generics
-from .serializers import UserSerializer, PostSerializer,ProfileSerializer
-from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Post,Profile
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from .models import Profile, Post, TripDay, DayPhoto, User
+from .serializers import (
+    UserSerializer,
+    ProfileSerializer,
+    ProfileUpdateSerializer,
+    PostSerializer,
+    TripDaySerializer,
+    DayPhotoSerializer
+)
 
+# --- User and Profile Views (no change) ---
 class CreateUserView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [AllowAny] # <-- This line is important to allow new users to register
+    permission_classes = [] # Allow any user to create an account
 
-class PostListCreate(generics.ListCreateAPIView):
+class ProfileView(generics.RetrieveAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+class ProfileUpdateView(generics.UpdateAPIView):
+    serializer_class = ProfileUpdateSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_object(self):
+        profile, created = Profile.objects.get_or_create(user=self.request.user)
+        return self.request.user.profile
+
+# --- NEW Trip and Day Views ---
+
+# Handles listing a user's trips and creating a new one
+class PostListCreateView(generics.ListCreateAPIView):
     serializer_class = PostSerializer
     permission_classes = [IsAuthenticated]
 
@@ -24,26 +48,35 @@ class PostListCreate(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-class ProfileView(generics.RetrieveAPIView):
-    serializer_class = UserSerializer
+# Handles retrieving, updating, and deleting a single trip
+class PostRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = PostSerializer
     permission_classes = [IsAuthenticated]
-    queryset = User.objects.all()
 
-    # These two methods MUST be indented to be inside the ProfileView class
-    def get_object(self):
-        return self.request.user
+    def get_queryset(self):
+        return Post.objects.filter(author=self.request.user)
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['trips_count'] = Post.objects.filter(author=self.request.user).count()
-        return context
+# Handles adding a new day to a specific trip
+class TripDayCreateView(generics.CreateAPIView):
+    serializer_class = TripDaySerializer
+    permission_classes = [IsAuthenticated]
 
-class ProfileUpdateView(generics.UpdateAPIView):
-    serializer_class = ProfileSerializer
+    def perform_create(self, serializer):
+        post = Post.objects.get(pk=self.kwargs['post_pk'], author=self.request.user)
+        serializer.save(post=post)
+
+# Handles uploading a photo to a specific day of a trip
+class DayPhotoCreateView(generics.CreateAPIView):
+    serializer_class = DayPhotoSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
-    queryset = Profile.objects.all()
 
-    def get_object(self):
-        profile, created = Profile.objects.get_or_create(user=self.request.user)
-        return profile
+    def perform_create(self, serializer):
+        trip_day = TripDay.objects.get(pk=self.kwargs['day_pk'])
+        # Security check: Ensure the day belongs to a post owned by the user
+        if trip_day.post.author == self.request.user:
+            serializer.save(trip_day=trip_day)
+        else:
+            # Handle permission denied
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to add photos to this trip day.")

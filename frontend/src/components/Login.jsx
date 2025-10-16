@@ -1,7 +1,7 @@
 // frontend/src/components/Login.jsx
 import React, { useState } from 'react';
-import axios from 'axios';
-import { Link } from 'react-router-dom';
+import api from '../api'; 
+import { useNavigate,Link } from 'react-router-dom';
 import image1 from '../assets/image1.jpg'; // <-- Import your images
 import image2 from '../assets/image2.jpg';
 import image3 from '../assets/image3.jpg';
@@ -9,18 +9,22 @@ import image3 from '../assets/image3.jpg';
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
          console.log("Login button clicked! Sending data:", { username, password });
         try {
-            const res = await axios.post('http://127.0.0.1:8000/api/token/', { username, password });
+           const res = await api.post("/api/token/", { username, password });
             localStorage.setItem('access_token', res.data.access);
             localStorage.setItem('refresh_token', res.data.refresh);
-            window.location.href = '/';
+
+            localStorage.setItem("authTokens", JSON.stringify(res.data));
+            
+          navigate("/"); 
         } catch (error) {
             console.error("Login request failed!", error); 
-            alert('Login failed! Check your credentials.',error);
+            alert('Login failed! Check your credentials.');
         }
     };
 

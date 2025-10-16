@@ -1,6 +1,6 @@
 // frontend/src/components/Signup.jsx
 import React, { useState } from 'react';
-import axios from 'axios';
+ import api from '../api'; 
 import { Link } from 'react-router-dom';
 import image1 from '../assets/image1.jpg'; 
 import image2 from '../assets/image2.jpg';
@@ -14,7 +14,7 @@ const Signup = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await axios.post('http://127.0.0.1:8000/api/user/register/', {
+            await api.post('/api/user/register/', {
                 username,
                 email,
                 password,

@@ -1,54 +1,60 @@
 # backend/api/serializers.py
-from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Post, Profile # <-- 1. Import the Profile model
+from .models import Profile, Post, TripDay, DayPhoto
+from django.contrib.auth.models import User
 
-# 2. Create a new serializer for the Profile model
+# --- Profile Serializers (no change) ---
 class ProfileSerializer(serializers.ModelSerializer):
-    # We create custom fields to build the full URL
-    profile_picture = serializers.SerializerMethodField()
-    background_picture = serializers.SerializerMethodField()
-
     class Meta:
         model = Profile
         fields = ["profile_picture", "background_picture"]
 
-    # This method builds the full URL for the profile_picture
-    def get_profile_picture(self, obj):
-        request = self.context.get('request')
-        if obj.profile_picture and hasattr(obj.profile_picture, 'url'):
-            return request.build_absolute_uri(obj.profile_picture.url)
-        return None # Or a default URL
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ["profile_picture"]
+        extra_kwargs = {
+            'profile_picture': {'required': False}
+        }
 
-    # This method builds the full URL for the background_picture
-    def get_background_picture(self, obj):
-        request = self.context.get('request')
-        if obj.background_picture and hasattr(obj.background_picture, 'url'):
-            return request.build_absolute_uri(obj.background_picture.url)
-        return None
-
+# --- User Serializer (no change) ---
 class UserSerializer(serializers.ModelSerializer):
-    trips_count = serializers.SerializerMethodField()
-    # 3. Nest the ProfileSerializer here
     profile = ProfileSerializer(read_only=True)
-
     class Meta:
         model = User
-        # 4. Add "profile" to the list of fields
-        fields = ["id", "username", "email", "password", "trips_count", "profile"]
+        fields = ["id", "username", "password", "profile"]
         extra_kwargs = {"password": {"write_only": True}}
 
-    def get_trips_count(self, obj):
-        # We now get the count from the related 'posts' field
-        return obj.posts.count()
-
     def create(self, validated_data):
-        # We don't need to pop trips_count anymore
         user = User.objects.create_user(**validated_data)
+        Profile.objects.create(user=user)
         return user
 
+# --- NEW Nested Trip Serializers ---
+
+# Serializer 3: Translates a single photo
+class DayPhotoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DayPhoto
+        fields = ["id", "image", "caption"]
+
+# Serializer 2: Translates a single day AND nests its photos
+class TripDaySerializer(serializers.ModelSerializer):
+    photos = DayPhotoSerializer(many=True, read_only=True) # Nested photos
+
+    class Meta:
+        model = TripDay
+        fields = ["id", "day_number", "date", "location_name", "description", "latitude", "longitude", "photos"]
+
+# Serializer 1: Translates the main post AND nests its days
 class PostSerializer(serializers.ModelSerializer):
+    days = TripDaySerializer(many=True, read_only=True) # Nested days
+    author = serializers.ReadOnlyField(source='author.username') # Show author's name
+
     class Meta:
         model = Post
-        fields = ["id", "title", "content", "created_at", "author"]
+        fields = [
+            "id", "author", "title", "cover_photo", "location_summary",
+            "start_date", "end_date", "is_joinable", "created_at", "days"
+        ]
         extra_kwargs = {"author": {"read_only": True}}
