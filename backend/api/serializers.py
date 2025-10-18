@@ -1,9 +1,25 @@
 # backend/api/serializers.py
 from rest_framework import serializers
-from .models import Profile, Post, TripDay, DayPhoto
+from .models import Profile,Comment, SavedPost, Post, TripDay, DayPhoto,Follow, TripJoinRequest,Notification, Message
 from django.contrib.auth.models import User
 
 # --- Profile Serializers (no change) ---
+
+class CommentSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'user', 'text', 'created_at']
+
+
+class SavedPostSerializer(serializers.ModelSerializer):
+    post_title = serializers.CharField(source='post.title', read_only=True)
+
+    class Meta:
+        model = SavedPost
+        fields = ['id', 'post', 'post_title', 'saved_at']
+
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
@@ -47,14 +63,59 @@ class TripDaySerializer(serializers.ModelSerializer):
         fields = ["id", "day_number", "date", "location_name", "description", "latitude", "longitude", "photos"]
 
 # Serializer 1: Translates the main post AND nests its days
+# backend/api/serializers.py
 class PostSerializer(serializers.ModelSerializer):
-    days = TripDaySerializer(many=True, read_only=True) # Nested days
-    author = serializers.ReadOnlyField(source='author.username') # Show author's name
+    days = TripDaySerializer(many=True, read_only=True)
+    author = serializers.ReadOnlyField(source='author.username')
+    total_likes = serializers.IntegerField(source='likes.count', read_only=True)
+    total_comments = serializers.IntegerField(source='comments.count', read_only=True)
+    is_liked = serializers.SerializerMethodField()
+    is_saved = serializers.SerializerMethodField()
+    comments = CommentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Post
         fields = [
             "id", "author", "title", "cover_photo", "location_summary",
-            "start_date", "end_date", "is_joinable", "created_at", "days"
+            "start_date", "end_date", "is_joinable", "created_at", "days",
+            "total_likes", "total_comments", "is_liked", "is_saved","comments"
         ]
-        extra_kwargs = {"author": {"read_only": True}}
+
+    def get_is_liked(self, obj):
+        user = self.context['request'].user
+        return obj.likes.filter(user=user).exists()
+
+    def get_is_saved(self, obj):
+        user = self.context['request'].user
+        return SavedPost.objects.filter(post=obj, user=user).exists()
+class TripJoinRequestSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    post = PostSerializer(read_only=True)
+
+    class Meta:
+        model = TripJoinRequest
+        fields = ['id', 'user', 'post', 'is_approved', 'created_at']
+
+class NotificationSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+    post = PostSerializer(read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = ['id', 'user', 'sender', 'post', 'text', 'is_read', 'created_at']
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender = UserSerializer(read_only=True)
+    receiver = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Message
+        fields = ['id', 'sender', 'receiver', 'post', 'text', 'timestamp']
+
+class FollowSerializer(serializers.ModelSerializer):
+    follower = UserSerializer(read_only=True)
+    following = UserSerializer(read_only=True)
+
+    class Meta:
+        model = Follow
+        fields = ['id', 'follower', 'following', 'created_at']

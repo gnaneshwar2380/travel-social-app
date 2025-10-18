@@ -22,10 +22,44 @@ class Post(models.Model):
     is_joinable = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    
+
+    def total_likes(self):
+        return self.likes.count()
+    
+    def total_comments(self):
+        return self.comments.count()
+
     def __str__(self):
         return self.title
 
-# --- Model 2: Each "day" in the trip thread ---
+# --- Model 2: Each "day" in the trip thread --
+# -
+class Like(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, related_name="likes", on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'post')
+
+class Comment(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, related_name="comments", on_delete=models.CASCADE)
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class SavedPost(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_posts')
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='saves')
+    saved_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'post')
+
+    def __str__(self):
+        return f"{self.user.username} saved {self.post.title}"
+
 class TripDay(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='days')
     day_number = models.IntegerField()
@@ -49,3 +83,46 @@ class DayPhoto(models.Model):
 
     def __str__(self):
         return f"Photo for {self.trip_day}"
+    
+class Follow(models.Model):
+    follower = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)
+    following = models.ForeignKey(User, related_name='followers', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('follower', 'following')
+
+    def __str__(self):
+        return f"{self.follower} → {self.following}"
+class TripJoinRequest(models.Model):
+    post = models.ForeignKey(Post, related_name='join_requests', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('post', 'user')
+
+    def __str__(self):
+        return f"{self.user.username} requested to join {self.post.title}"
+
+class Notification(models.Model):
+    user = models.ForeignKey(User, related_name='notifications', on_delete=models.CASCADE)
+    sender = models.ForeignKey(User, related_name='sent_notifications', on_delete=models.CASCADE, null=True, blank=True)
+    post = models.ForeignKey(Post, null=True, blank=True, on_delete=models.CASCADE)
+    text = models.CharField(max_length=255)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Notification for {self.user.username}: {self.text}"
+
+class Message(models.Model):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages', null=True, blank=True)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True)  # For trip group chats
+    text = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.sender.username} → {self.receiver.username if self.receiver else self.post.title}"

@@ -1,16 +1,20 @@
 // frontend/src/App.jsx
 import { Routes, Route, Navigate } from "react-router-dom";
-import Login from "./components/Login";
-import Signup from "./components/Signup";
-import Profile from "./components/Profile";
-import ProtectedRoute from "./components/ProtectedRoute";
-import CreateTrip from "./components/CreateTrip";
-import EditTrip from "./components/EditTrip";
+import Login from "./components/Login.jsx";
+import Signup from "./components/Signup.jsx";
+import Profile from "./components/Profile.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import CreateTrip from "./components/CreateTrip.jsx";
+import EditTrip from "./components/EditTrip.jsx";
+import TripDetail from "./components/TripDetail.jsx";
+import Home from "./components/Home.jsx";
+import Logout from "./components/Logout.jsx";
+import Notification from "./components/Notification.jsx";
+import Messages from "./components/Messages.jsx";
+import Search from "./components/Search";
 
-function Logout() {
-  localStorage.clear();
-  return <Navigate to="/login" />;
-}
+
+import BottomNav from "./components/BottomNav.jsx";
 
 function RegisterAndLogout() {
   localStorage.clear();
@@ -19,51 +23,93 @@ function RegisterAndLogout() {
 
 function App() {
   return (
-    <Routes>
-      {/* ✅ Main route goes to Profile (protected) */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        }
-      />
+    <div className="pb-16"> {/* Add padding so content doesn’t hide behind nav */}
+      <Routes>
+        {/* 🏠 Home */}
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+  path="/search"
+  element={
+    <ProtectedRoute>
+      <Search />
+    </ProtectedRoute>
+  }
+/>
+ 
+       <Route
+  path="/messages"
+  element={
+    <ProtectedRoute>
+      <Messages />
+    </ProtectedRoute>
+  }
+/>
 
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        }
-      />
+        {/* 👤 Profile */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/create-trip"
-        element={
-          <ProtectedRoute>
-            <CreateTrip />
-          </ProtectedRoute>
-        }
-      />
+        {/* 🔔 Notifications */}
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <Notification />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route
-        path="/trip/:id/edit"
-        element={
-          <ProtectedRoute>
-            <EditTrip />
-          </ProtectedRoute>
-        }
-      />
+        {/* 🧭 Trip pages */}
+        <Route
+          path="/trip/:id"
+          element={
+            <ProtectedRoute>
+              <TripDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/create-trip"
+          element={
+            <ProtectedRoute>
+              <CreateTrip />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trip/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EditTrip />
+            </ProtectedRoute>
+          }
+        />
 
-      <Route path="/login" element={<Login />} />
-      <Route path="/logout" element={<Logout />} />
-      <Route path="/signup" element={<RegisterAndLogout />} />
+        {/* 🔐 Auth */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/logout" element={<Logout />} />
+        <Route path="/signup" element={<RegisterAndLogout />} />
 
-      {/* Default redirect to Profile */}
-      <Route path="*" element={<Navigate to="/profile" />} />
-    </Routes>
+        {/* Default */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+
+      {/* 📱 Bottom Navigation (only if logged in) */}
+      {localStorage.getItem("authTokens") && <BottomNav />}
+    </div>
   );
 }
 

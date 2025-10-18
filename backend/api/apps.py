@@ -1,4 +1,6 @@
 from django.apps import AppConfig
+def ready(self):
+    import backend.api.signals
 
 
 class ApiConfig(AppConfig):
