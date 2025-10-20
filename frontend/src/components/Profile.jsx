@@ -99,9 +99,12 @@ const Profile = () => {
   if (loading) return <div>Loading your profile...</div>;
   if (!profile) return <div>Could not load profile.</div>;
 
-  const profilePictureUrl = profile.profile?.profile_picture
-    ? `http://127.0.0.1:8000${profile.profile.profile_picture}`
+  // ✅ Fixed: profile response contains user and profile info
+  const profilePictureUrl = profile.profile_picture
+    ? `http://127.0.0.1:8000${profile.profile_picture}`
     : `http://127.0.0.1:8000/media/profile_pics/default.jpg`;
+
+  const username = profile.user?.username || profile.username || "User";
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -126,9 +129,20 @@ const Profile = () => {
               alt="Profile"
             />
 
-            <h1 className="text-2xl font-bold text-gray-900 mt-4">
-              {profile.username}
-            </h1>
+            {/* ✅ Username displayed below profile picture */}
+            
+              <h1 className="text-2xl font-bold text-gray-900 mt-4">
+  {profile.user?.username || "Anonymous User"}
+</h1>
+
+            
+
+            {/* Optional: Bio */}
+            {profile.bio && (
+              <p className="text-gray-600 text-center mt-2 w-3/4">
+                {profile.bio}
+              </p>
+            )}
 
             {/* Buttons */}
             <div className="mt-4 flex space-x-4">

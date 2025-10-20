@@ -72,34 +72,31 @@ class PostSerializer(serializers.ModelSerializer):
     is_liked = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
     comments = CommentSerializer(many=True, read_only=True)
-    author_profile = serializers.SerializerMethodField() 
+    author_profile = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
         fields = [
-            "id", "author", "caption", "cover_photo", "location_summary",  
+            "id", "author", "title", "cover_photo", "location_summary",
             "start_date", "end_date", "is_joinable", "created_at", "days",
-            "total_likes", "total_comments", "is_liked", "is_saved",
-            "author_profile", "comments"  
+            "total_likes", "total_comments", "is_liked", "is_saved", 
+            "author_profile", "comments"
         ]
 
     def get_is_liked(self, obj):
         user = self.context['request'].user
-        if user.is_authenticated:
-            return obj.likes.filter(user=user).exists()
-        return False
+        return obj.likes.filter(user=user).exists()
 
     def get_is_saved(self, obj):
         user = self.context['request'].user
-        if user.is_authenticated:
-            return SavedPost.objects.filter(post=obj, user=user).exists()
-        return False
+        return SavedPost.objects.filter(post=obj, user=user).exists()
 
     def get_author_profile(self, obj):
         request = self.context.get('request')
-        if hasattr(obj.author, "profile_picture") and obj.author.profile_picture:
+        if hasattr(obj.author, 'profile_picture') and obj.author.profile_picture:
             return request.build_absolute_uri(obj.author.profile_picture.url)
         return None
+
 
 class TripJoinRequestSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)

@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from "react";
-import api from "../api";
+import {
+  getForYouFeed,
+  getFollowingFeed,
+  search as searchAPI,
+} from "../api";
 import { Search } from "lucide-react";
 
 export default function Home() {
@@ -9,21 +13,24 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Fetch feed for  or "Following"
+  // Fetch feed for "For You" or "Following"
   useEffect(() => {
-    if (isSearching) return; // don’t reload feed during search
+    if (isSearching) return;
+
     const fetchFeed = async () => {
       try {
-        const endpoint =
+        const res =
           activeTab === "foryou"
-            ? "/api/posts/foryou/"
-            : "/api/posts/following/";
-        const res = await api.get(endpoint);
+            ? await getForYouFeed()
+            : await getFollowingFeed();
+
         setPosts(res.data);
       } catch (err) {
         console.error("Error fetching feed:", err);
+        setPosts([]);
       }
     };
+
     fetchFeed();
   }, [activeTab, isSearching]);
 
@@ -34,10 +41,11 @@ export default function Home() {
 
     try {
       setIsSearching(true);
-      const res = await api.get(`/api/search/?q=${searchTerm}`);
+      const res = await searchAPI(searchTerm);
       setSearchResults(res.data.results || []);
     } catch (err) {
       console.error("Search error:", err);
+      setSearchResults([]);
     }
   };
 
