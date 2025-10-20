@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { getNotifications, markAllRead } from "../api";
 import { Bell } from "lucide-react";
 
+
 const Notification = () => {
   const [notifications, setNotifications] = useState([]);
   const [open, setOpen] = useState(false);

@@ -2,8 +2,8 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import dayjs from "dayjs";
 
-// ✅ Base URL (no double /api)
-const baseURL = "http://127.0.0.1:8000";
+const baseURL = "http://127.0.0.1:8000/api";
+
 
 let authTokens = localStorage.getItem("authTokens")
   ? JSON.parse(localStorage.getItem("authTokens"))
@@ -14,9 +14,6 @@ const api = axios.create({
   headers: { Authorization: `Bearer ${authTokens?.access}` },
 });
 
-// =====================================================
-// 🔒 JWT TOKEN HANDLER
-// =====================================================
 api.interceptors.request.use(async (req) => {
   authTokens = localStorage.getItem("authTokens")
     ? JSON.parse(localStorage.getItem("authTokens"))
@@ -35,7 +32,6 @@ api.interceptors.request.use(async (req) => {
     return req;
   }
 
-  // Refresh token when expired
   const response = await axios.post(`${baseURL}/token/refresh/`, {
     refresh: authTokens.refresh,
   });
@@ -45,37 +41,33 @@ api.interceptors.request.use(async (req) => {
   return req;
 });
 
-// =====================================================
-// 🌍 API ENDPOINT FUNCTIONS
-// =====================================================
-
-// --- Profile ---
+// Profile
 export const getProfile = () => api.get("/profile/");
 
-// --- Mates (Mutual Followers) ---
+// Mates
 export const getMates = () => api.get("/follows/mates/");
 
-// --- Posts ---
+// Posts
 export const getAllPosts = () => api.get("/posts/");
 export const getJoinableTrips = () => api.get("/posts/joinable/");
 export const createPost = (data) => api.post("/posts/", data);
 
-// --- Join Requests ---
+// Join Requests
 export const joinTrip = (postId) => api.post("/join-requests/", { post: postId });
 export const approveJoinRequest = (id) => api.post(`/join-requests/${id}/approve/`);
 
-// --- Notifications ---
+// Notifications
 export const getNotifications = () => api.get("/notifications/");
 export const markAllRead = () => api.post("/notifications/mark_all_read/");
 
-// --- Messages ---
+// Messages
 export const getMessages = () => api.get("/messages/");
 export const sendMessage = (data) => api.post("/messages/", data);
 export const getTripChat = (postId) => api.get(`/messages/trip_chat/?post_id=${postId}`);
 
-// --- Auth Helpers ---
+// Auth
 export const loginUser = (credentials) => axios.post(`${baseURL}/token/`, credentials);
 export const refreshToken = (refresh) => axios.post(`${baseURL}/token/refresh/`, { refresh });
 
-// =====================================================
 export default api;
+

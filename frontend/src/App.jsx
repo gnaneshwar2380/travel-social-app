@@ -1,5 +1,4 @@
-// frontend/src/App.jsx
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Login from "./components/Login.jsx";
 import Signup from "./components/Signup.jsx";
 import Profile from "./components/Profile.jsx";
@@ -11,10 +10,9 @@ import Home from "./components/Home.jsx";
 import Logout from "./components/Logout.jsx";
 import Notification from "./components/Notification.jsx";
 import Messages from "./components/Messages.jsx";
-import Search from "./components/Search";
-
-
+import Search from "./components/Search.jsx";
 import BottomNav from "./components/BottomNav.jsx";
+import UserProfile from "./components/UserProfile.jsx";
 
 function RegisterAndLogout() {
   localStorage.clear();
@@ -22,93 +20,95 @@ function RegisterAndLogout() {
 }
 
 function App() {
+  const location = useLocation();
+  const isLoggedIn = !!localStorage.getItem("authTokens");
+  const hideNavRoutes = ["/login", "/signup"];
+  const shouldShowNav = isLoggedIn && !hideNavRoutes.includes(location.pathname);
+
   return (
-    <div className="pb-16"> {/* Add padding so content doesn’t hide behind nav */}
-      <Routes>
-        {/* 🏠 Home */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-  path="/search"
-  element={
-    <ProtectedRoute>
-      <Search />
-    </ProtectedRoute>
-  }
-/>
- 
-       <Route
-  path="/messages"
-  element={
-    <ProtectedRoute>
-      <Messages />
-    </ProtectedRoute>
-  }
-/>
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-grow pb-16">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/search"
+            element={
+              <ProtectedRoute>
+                <Search />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <Messages />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <Notification />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/trip/:id"
+            element={
+              <ProtectedRoute>
+                <TripDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/create-trip"
+            element={
+              <ProtectedRoute>
+                <CreateTrip />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/trip/:id/edit"
+            element={
+              <ProtectedRoute>
+                <EditTrip />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user/:username"
+            element={
+              <ProtectedRoute>
+                <UserProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<Login />} />
+          <Route path="/logout" element={<Logout />} />
+          <Route path="/signup" element={<RegisterAndLogout />} />
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </div>
 
-        {/* 👤 Profile */}
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* 🔔 Notifications */}
-        <Route
-          path="/notifications"
-          element={
-            <ProtectedRoute>
-              <Notification />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* 🧭 Trip pages */}
-        <Route
-          path="/trip/:id"
-          element={
-            <ProtectedRoute>
-              <TripDetail />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/create-trip"
-          element={
-            <ProtectedRoute>
-              <CreateTrip />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/trip/:id/edit"
-          element={
-            <ProtectedRoute>
-              <EditTrip />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* 🔐 Auth */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/logout" element={<Logout />} />
-        <Route path="/signup" element={<RegisterAndLogout />} />
-
-        {/* Default */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-
-      {/* 📱 Bottom Navigation (only if logged in) */}
-      {localStorage.getItem("authTokens") && <BottomNav />}
+      {shouldShowNav && <BottomNav />}
     </div>
   );
 }

@@ -85,15 +85,18 @@ class DayPhoto(models.Model):
         return f"Photo for {self.trip_day}"
     
 class Follow(models.Model):
-    follower = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)
-    following = models.ForeignKey(User, related_name='followers', on_delete=models.CASCADE)
+    follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name="following")
+    following = models.ForeignKey(User, on_delete=models.CASCADE, related_name="followers")
+    is_accepted = models.BooleanField(default=False)  # new field
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ('follower', 'following')
 
     def __str__(self):
-        return f"{self.follower} → {self.following}"
+        return f"{self.follower} → {self.following} ({'accepted' if self.is_accepted else 'pending'})"
+    
 class TripJoinRequest(models.Model):
     post = models.ForeignKey(Post, related_name='join_requests', on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -126,3 +129,4 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender.username} → {self.receiver.username if self.receiver else self.post.title}"
+

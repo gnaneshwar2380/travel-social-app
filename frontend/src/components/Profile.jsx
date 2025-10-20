@@ -1,23 +1,25 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import api from '../api';
-import EditProfileModal from './EditProfileModal';
-import PostCard from './PostCard';
+import React, { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
+import api, { getNotifications, markAllRead } from "../api";
+import EditProfileModal from "./EditProfileModal";
+import PostCard from "./PostCard";
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('Trips');
+  const [activeTab, setActiveTab] = useState("Trips");
   const [posts, setPosts] = useState([]);
+  const [mates, setMates] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
-  // Fetch profile details
+  // ✅ Fetch profile details
   const fetchProfile = useCallback(async () => {
     try {
-      const res = await api.get('/api/profile/');
+      const res = await api.get("/profile/");
       setProfile(res.data);
     } catch (error) {
-      console.error('Failed to fetch profile', error);
+      console.error("Failed to fetch profile", error);
     } finally {
       setLoading(false);
     }
@@ -27,37 +29,72 @@ const Profile = () => {
     fetchProfile();
   }, [fetchProfile]);
 
-  // Fetch saved posts (Travelwonder)
+  // ✅ Fetch saved posts (Travelwonder)
   useEffect(() => {
     const fetchSaved = async () => {
       try {
-        const res = await api.get('/api/saved/');
+        const res = await api.get("/saved/");
         setPosts(res.data);
       } catch (error) {
-        console.error('Failed to fetch saved posts', error);
+        console.error("Failed to fetch saved posts", error);
       }
     };
 
-    if (activeTab === 'Travelwonder') {
-      fetchSaved();
-    }
+    if (activeTab === "Travelwonder") fetchSaved();
   }, [activeTab]);
 
-  // Fetch user's own trips
+  // ✅ Fetch user's own trips
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const res = await api.get('/api/posts/');
+        const res = await api.get("/posts/");
         setPosts(res.data);
       } catch (error) {
-        console.error('Failed to fetch posts', error);
+        console.error("Failed to fetch posts", error);
       }
     };
 
-    if (activeTab === 'Trips') {
-      fetchPosts();
-    }
+    if (activeTab === "Trips") fetchPosts();
   }, [activeTab]);
+
+  // ✅ Fetch mates (mutual follows)
+  useEffect(() => {
+    const fetchMates = async () => {
+      try {
+        const res = await api.get("/follows/mates/");
+        setMates(res.data);
+      } catch (err) {
+        console.error("Failed to fetch mates", err);
+      }
+    };
+
+    if (activeTab === "Mates") fetchMates();
+  }, [activeTab]);
+
+  // ✅ Fetch notifications
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await getNotifications();
+        setNotifications(res.data);
+      } catch (err) {
+        console.error("Failed to fetch notifications", err);
+      }
+    };
+
+    if (activeTab === "Notifications") fetchNotifications();
+  }, [activeTab]);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllRead();
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, is_read: true }))
+      );
+    } catch (err) {
+      console.error("Failed to mark notifications as read", err);
+    }
+  };
 
   if (loading) return <div>Loading your profile...</div>;
   if (!profile) return <div>Could not load profile.</div>;
@@ -89,11 +126,9 @@ const Profile = () => {
               alt="Profile"
             />
 
-            <div className="flex items-center space-x-2 mt-4">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {profile.username}
-              </h1>
-            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mt-4">
+              {profile.username}
+            </h1>
 
             {/* Buttons */}
             <div className="mt-4 flex space-x-4">
@@ -113,80 +148,123 @@ const Profile = () => {
 
             {/* Tabs */}
             <div className="mt-6 border-b border-gray-200 w-full">
-              <nav className="-mb-px flex space-x-8 justify-center" aria-label="Tabs">
-                <button
-                  onClick={() => setActiveTab('Travelwonder')}
-                  className={
-                    activeTab === 'Travelwonder'
-                      ? 'border-teal-500 text-teal-600 py-4 px-1 border-b-2 font-medium text-sm'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 border-b-2 font-medium text-sm'
-                  }
-                >
-                  Travelwonder
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('Trips')}
-                  className={
-                    activeTab === 'Trips'
-                      ? 'border-teal-500 text-teal-600 py-4 px-1 border-b-2 font-medium text-sm'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 border-b-2 font-medium text-sm'
-                  }
-                >
-                  Trips
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('Mates')}
-                  className={
-                    activeTab === 'Mates'
-                      ? 'border-teal-500 text-teal-600 py-4 px-1 border-b-2 font-medium text-sm'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 border-b-2 font-medium text-sm'
-                  }
-                >
-                  Mates
-                </button>
+              <nav
+                className="-mb-px flex space-x-8 justify-center"
+                aria-label="Tabs"
+              >
+                {["Travelwonder", "Trips", "Mates", "Notifications"].map(
+                  (tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={
+                        activeTab === tab
+                          ? "border-teal-500 text-teal-600 py-4 px-1 border-b-2 font-medium text-sm"
+                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 py-4 px-1 border-b-2 font-medium text-sm"
+                      }
+                    >
+                      {tab}
+                    </button>
+                  )
+                )}
               </nav>
             </div>
           </div>
 
           {/* Content Section */}
           <div className="mt-8">
-            {activeTab === 'Trips' && (
+            {/* Trips */}
+            {activeTab === "Trips" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {posts.length > 0 ? (
                   posts.map((post) => <PostCard key={post.id} post={post} />)
                 ) : (
                   <p className="col-span-full text-center text-gray-500">
-                    No trips posted yet. Click 'Create New Trip' to get started!
+                    No trips posted yet. Click "Create New Trip" to get started!
                   </p>
                 )}
               </div>
             )}
 
-            {/* ✅ Travelwonder Section */}
-            {activeTab === 'Travelwonder' && (
+            {/* Travelwonder */}
+            {activeTab === "Travelwonder" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {posts.length > 0 ? (
                   posts.map((post) => <PostCard key={post.id} post={post} />)
                 ) : (
                   <p className="col-span-full text-center text-gray-500">
-                    You haven't saved any trips yet. Tap the 📑 Save icon on posts you like!
+                    You haven't saved any trips yet. Tap the 📑 icon on posts you
+                    like!
                   </p>
                 )}
               </div>
             )}
 
-            {/* Mates Section */}
-            {activeTab === 'Mates' && (
-              <div className="text-center text-gray-500 mt-8">
-                Coming soon: Connect with your travel buddies!
+            {/* Mates */}
+            {activeTab === "Mates" && (
+              <div>
+                {mates.length > 0 ? (
+                  <ul className="grid grid-cols-2 gap-4">
+                    {mates.map((mate) => (
+                      <li
+                        key={mate.id}
+                        className="bg-white shadow rounded-lg p-4 text-center"
+                      >
+                        <p className="font-semibold">{mate.username}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-center text-gray-500">
+                    No mates yet — follow and get followed back!
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Notifications */}
+            {activeTab === "Notifications" && (
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-gray-800">
+                    Notifications
+                  </h2>
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="text-sm bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-md"
+                  >
+                    Mark all read
+                  </button>
+                </div>
+
+                {notifications.length > 0 ? (
+                  <ul className="space-y-3">
+                    {notifications.map((n) => (
+                      <li
+                        key={n.id}
+                        className={`p-3 rounded-lg shadow-sm ${
+                          n.is_read ? "bg-gray-100" : "bg-blue-50"
+                        }`}
+                      >
+                        <p className="text-gray-800 text-sm">{n.text}</p>
+                        <p className="text-gray-400 text-xs mt-1">
+                          {new Date(n.created_at).toLocaleString()}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-500 text-center">
+                    No notifications yet.
+                  </p>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
+      {/* Edit Profile Modal */}
       {isModalOpen && (
         <EditProfileModal
           onClose={() => setIsModalOpen(false)}

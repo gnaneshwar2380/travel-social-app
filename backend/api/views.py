@@ -15,10 +15,12 @@ from .serializers import (
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+
 from .models import Post, Like, SavedPost, Comment, Follow, TripJoinRequest, Notification, Message
 from .serializers import PostSerializer, CommentSerializer
 from rest_framework.decorators import api_view, permission_classes
+
 
 # --- User and Profile Views (no change) ---
 from rest_framework import viewsets, status
@@ -39,26 +41,126 @@ from .serializers import (
 # =====================================================
 # 1️⃣  MATES (Mutual Follows)
 # =====================================================
+
 class FollowViewSet(viewsets.ModelViewSet):
     queryset = Follow.objects.all()
     serializer_class = FollowSerializer
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(follower=self.request.user)
+        """Handle follow requests and auto-accept mutual follows."""
+        follow_instance = serializer.save(follower=self.request.user)
 
-    @action(detail=False, methods=['get'])
+        # Auto-accept if the other user already follows back
+        if Follow.objects.filter(
+            follower=follow_instance.following,
+            following=self.request.user,
+            status='accepted'
+        ).exists():
+            follow_instance.status = 'accepted'
+            follow_instance.save()
+
+            # Notify both users they are now mates
+            Notification.objects.create(
+                user=follow_instance.following,
+                sender=self.request.user,
+                text=f"{self.request.user.username} started following you back."
+            )
+        else:
+            # Normal follow request notification
+            Notification.objects.create(
+                user=follow_instance.following,
+                sender=self.request.user,
+                text=f"{self.request.user.username} sent you a follow request."
+            )
+
     def mates(self, request):
-        """Return mutual follows (mates)."""
-        user = request.user
-        following_ids = Follow.objects.filter(follower=user).values_list('following', flat=True)
-        followers_ids = Follow.objects.filter(following=user).values_list('follower', flat=True)
-        mutual_ids = set(following_ids).intersection(set(followers_ids))
-        mates = User.objects.filter(id__in=mutual_ids)
-        serializer = UserSerializer(mates, many=True)
-        return Response(serializer.data)
+     user = request.user
+     following_ids = Follow.objects.filter(follower=user, is_accepted=True).values_list('following', flat=True)
+     followers_ids = Follow.objects.filter(following=user, is_accepted=True).values_list('follower', flat=True)
+     mutual_ids = set(following_ids).intersection(set(followers_ids))
+     mates = User.objects.filter(id__in=mutual_ids)
+     serializer = UserSerializer(mates, many=True)
+     return Response(serializer.data)
 
 
+    @action(detail=True, methods=['post'])
+    def accept(self, request, pk=None):
+        """Accept a follow request."""
+        follow = self.get_object()
+        if follow.following != request.user:
+            return Response({'error': 'You cannot accept this request.'}, status=403)
+
+        follow.status = 'accepted'
+        follow.save()
+
+        Notification.objects.create(
+            user=follow.follower,
+            sender=request.user,
+            text=f"{request.user.username} accepted your follow request."
+        )
+        return Response({'status': 'accepted'})
+
+    @action(detail=True, methods=['post'])
+    def unfollow(self, request, pk=None):
+        """Unfollow a user."""
+        user_to_unfollow = User.objects.get(pk=pk)
+        follow = Follow.objects.filter(follower=request.user, following=user_to_unfollow)
+        if not follow.exists():
+            return Response({"detail": "You are not following this user."}, status=status.HTTP_400_BAD_REQUEST)
+        follow.delete()
+        return Response({"detail": f"You have unfollowed {user_to_unfollow.username}."})
+
+    @action(detail=True, methods=['get'])
+    def is_following(self, request, pk=None):
+        """Check if the current user follows another."""
+        user_to_check = User.objects.get(pk=pk)
+        is_following = Follow.objects.filter(follower=request.user, following=user_to_check).exists()
+        return Response({"is_following": is_following})
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def foryou_feed(request):
+    # Show all posts (or exclude user's own posts if you prefer)
+    posts = Post.objects.all().order_by('-created_at')
+    serializer = PostSerializer(posts, many=True)
+    return Response(serializer.data)
+
+
+# --- Following feed ---
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def following_feed(request):
+    user = request.user
+    following = Follow.objects.filter(
+        follower=user, is_accepted=True
+    ).values_list('following', flat=True)
+
+    posts = Post.objects.filter(author__in=following).order_by('-created_at')
+    serializer = PostSerializer(posts, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def search(request):
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return Response({'results': []})
+
+    # Search users and posts
+    user_results = User.objects.filter(
+        Q(username__icontains=query) | Q(bio__icontains=query)
+    )
+    post_results = Post.objects.filter(
+        Q(caption__icontains=query) | Q(tags__name__icontains=query)
+    )
+
+    users_serialized = UserSerializer(user_results, many=True).data
+    posts_serialized = PostSerializer(post_results, many=True).data
+
+    return Response({
+        'results': users_serialized + posts_serialized
+    })
 # =====================================================
 # 2️⃣  POSTS / JOINABLE TRIPS
 # =====================================================
@@ -260,3 +362,5 @@ class DayPhotoCreateView(generics.CreateAPIView):
             # Handle permission denied
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You do not have permission to add photos to this trip day.")
+        
+

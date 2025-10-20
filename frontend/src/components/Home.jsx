@@ -9,7 +9,7 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Fetch feed for "For You" or "Following"
+  // Fetch feed for  or "Following"
   useEffect(() => {
     if (isSearching) return; // don’t reload feed during search
     const fetchFeed = async () => {
