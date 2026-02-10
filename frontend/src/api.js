@@ -55,7 +55,8 @@ api.interceptors.request.use(async (req) => {
 // ======================================================
 export const loginUser = (credentials) => axios.post(`${baseURL}/token/`, credentials);
 export const refreshToken = (refresh) => axios.post(`${baseURL}/token/refresh/`, { refresh });
-export const registerUser = (data) => axios.post(`${baseURL}/register/`, data);
+export const registerUser = (data) => axios.post(`${baseURL}/user/register/`, data);
+
 
 // ======================================================
 // 🔹 PROFILE

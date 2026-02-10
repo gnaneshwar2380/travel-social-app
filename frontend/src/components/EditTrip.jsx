@@ -34,7 +34,7 @@ const EditTrip = () => {
     const handleAddDay = async (e) => {
         e.preventDefault();
         try {
-            const res = await api.post(`/api/posts/${id}/days/`, {
+            await api.post(`/api/posts/${id}/days/`, {
                 day_number: dayNumber,
                 location_name: locationName,
                 description: description,

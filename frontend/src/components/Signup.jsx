@@ -33,7 +33,7 @@ const Signup = () => {
             alert('Registration successful!');
             window.location.href = '/';
         } catch (error) {
-            alert('Registration failed! Username or email already exists.');
+            alert('Registration failed!');
             console.error(error);
         }
     };

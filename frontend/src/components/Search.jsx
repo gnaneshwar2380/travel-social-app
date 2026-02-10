@@ -40,7 +40,7 @@ export default function Search() {
 
       {results.users.length > 0 && (
         <div className="mb-6">
-          <h3 className="font-semibold text-lg mb-2">Users</h3>
+          <h3 className="font-semibold text-lg mb-2">search results</h3>
           {results.users.map((user) => (
             <div
               key={user.id}

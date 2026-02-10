@@ -1,144 +1,144 @@
 import React, { useState } from "react";
+import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
 import api from "../api";
 
-const PostCard = ({ post }) => {
-  const [liked, setLiked] = useState(post.is_liked || false);
-  const [saved, setSaved] = useState(post.is_saved || false);
-  const [likesCount, setLikesCount] = useState(post.total_likes || 0);
-  const [comments, setComments] = useState(post.comments || []);
-  const [showComments, setShowComments] = useState(false);
-  const [commentText, setCommentText] = useState("");
+export default function PostCard({ post, onClickImageOrTitle }) {
+  const [likes, setLikes] = useState(post.total_likes ?? 0);
+  const [liked, setLiked] = useState(post.is_liked ?? false);
+  const [saved, setSaved] = useState(post.is_saved ?? false);
+  const [loadingLike, setLoadingLike] = useState(false);
+  const [loadingSave, setLoadingSave] = useState(false);
 
-  // ✅ Handle Like
+  const imageUrl = post.cover_photo
+    ? post.cover_photo.startsWith("http")
+      ? post.cover_photo
+      : `http://127.0.0.1:8000${post.cover_photo}`
+    : "/default-cover.jpg";
+
+  /*const profileImage = post.author_profile_picture
+    ? `http://127.0.0.1:8000${post.author_profile_picture}`
+    : "/default-avatar.png";*/
+
   const handleLike = async () => {
+    if (loadingLike) return;
+    setLoadingLike(true);
+
     try {
       const res = await api.post(`/api/posts/${post.id}/like/`);
       setLiked(res.data.liked);
-      setLikesCount(res.data.total_likes);
+      setLikes(res.data.total_likes);
     } catch (err) {
-      console.error("Like failed:", err);
+      console.error("Error liking post:", err);
+    } finally {
+      setLoadingLike(false);
     }
   };
 
-  // ✅ Handle Save (updated to expect message, not saved)
   const handleSave = async () => {
+    if (loadingSave) return;
+    setLoadingSave(true);
+
     try {
       const res = await api.post(`/api/posts/${post.id}/save/`);
-      // Backend returns {"message": "Post saved"} or {"message": "Post unsaved"}
-      if (res.data.message === "Post saved") setSaved(true);
-      else if (res.data.message === "Post unsaved") setSaved(false);
+      setSaved(res.data.saved);
     } catch (err) {
-      console.error("Save failed:", err);
+      console.error("Error saving post:", err);
+    } finally {
+      setLoadingSave(false);
     }
   };
 
-  // ✅ Handle Comment
-  const handleCommentSubmit = async (e) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
-
-    try {
-      const res = await api.post(`/api/posts/${post.id}/comment/`, {
-        text: commentText,
-      });
-      setComments((prev) => [...prev, res.data]);
-      setCommentText("");
-    } catch (err) {
-      console.error("Comment failed:", err);
-    }
-  };
-
-  // ✅ Handle Share
   const handleShare = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`);
-    alert("Post link copied to clipboard!");
+    const shareUrl = `${window.location.origin}/trip/${post.id}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: post.title,
+        url: shareUrl,
+      });
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      alert("Link copied to clipboard");
+    }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border mb-5 transition-all duration-200 hover:shadow-md">
-      {/* Cover Image */}
-      {post.cover_photo && (
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3">
         <img
-          src={`http://127.0.0.1:8000${post.cover_photo}`}
-          alt={post.title}
-          className="w-full h-56 object-cover rounded-t-lg"
+          src={profileImage}
+          alt={post.author}
+          className="w-10 h-10 rounded-full object-cover"
         />
-      )}
+        <div>
+          <p className="font-semibold text-sm">@{post.author}</p>
+          <p className="text-xs text-gray-500">
+            {new Date(post.created_at).toLocaleDateString()}
+          </p>
+        </div>
+      </div>
 
-      {/* Post Info */}
-      <div className="p-4">
-        <h3 className="font-semibold text-lg text-gray-800">{post.title}</h3>
-        <p className="text-sm text-gray-500 mb-2">
-          {likesCount} {likesCount === 1 ? "like" : "likes"}
-        </p>
+      {/* Image */}
+      <div className="cursor-pointer" onClick={onClickImageOrTitle}>
+        <img
+          src={imageUrl}
+          alt={post.title}
+          className="w-full h-72 object-cover"
+        />
+      </div>
 
-        {/* --- Action Buttons --- */}
-        <div className="flex justify-between text-gray-700 text-sm border-t border-b py-2 mt-2 select-none">
+      {/* Content */}
+      <div className="px-4 py-3">
+        <h3
+          className="font-semibold text-base cursor-pointer"
+          onClick={onClickImageOrTitle}
+        >
+          {post.title}
+        </h3>
+
+        {post.location_summary && (
+          <p className="text-sm text-gray-500 mt-1">
+            {post.location_summary}
+          </p>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center justify-between mt-4 text-gray-600">
           <button
             onClick={handleLike}
-            className={`hover:text-black transition ${
-              liked ? "font-semibold" : ""
-            }`}
+            className="flex items-center gap-1"
           >
-            {liked ? "♥ Liked" : "♡ Like"}
+            <Heart
+              size={20}
+              className={liked ? "text-red-500 fill-red-500" : ""}
+            />
+            <span className="text-sm">{likes}</span>
           </button>
 
           <button
-            onClick={() => setShowComments(!showComments)}
-            className="hover:text-black"
+            onClick={onClickImageOrTitle}
+            className="flex items-center gap-1"
           >
-            💬 Comment
+            <MessageCircle size={20} />
+            <span className="text-sm">Comments</span>
           </button>
 
-          <button onClick={handleShare} className="hover:text-black">
-            ↗ Share
+          <button onClick={handleShare} className="flex items-center gap-1">
+            <Share2 size={20} />
+            <span className="text-sm">Share</span>
           </button>
 
-          <button
-            onClick={handleSave}
-            className={`hover:text-black transition ${
-              saved ? "font-semibold" : ""
-            }`}
-          >
-            {saved ? "🔖 Saved" : "📑 Save"}
+          <button onClick={handleSave}>
+            <Bookmark
+              size={20}
+              className={saved ? "text-blue-600 fill-blue-600" : ""}
+            />
           </button>
         </div>
-
-        {/* --- Comments Section --- */}
-        {showComments && (
-          <div className="mt-3 border-t pt-2">
-            {comments.length === 0 ? (
-              <p className="text-gray-500 text-sm">No comments yet.</p>
-            ) : (
-              <div className="space-y-1 mb-2 max-h-32 overflow-y-auto">
-                {comments.map((c) => (
-                  <p key={c.id || Math.random()} className="text-sm">
-                    <strong>{c.username}</strong> {c.text}
-                  </p>
-                ))}
-              </div>
-            )}
-
-            <form onSubmit={handleCommentSubmit} className="flex space-x-2 mt-2">
-              <input
-                type="text"
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Add a comment..."
-                className="border rounded p-1 flex-1 text-sm focus:outline-none focus:ring focus:ring-gray-200"
-              />
-              <button
-                type="submit"
-                className="text-gray-700 text-sm font-medium hover:text-black"
-              >
-                Post
-              </button>
-            </form>
-          </div>
-        )}
       </div>
     </div>
   );
-};
+}
 
-export default PostCard;
+

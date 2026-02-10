@@ -1,5 +1,5 @@
 // frontend/src/components/Login.jsx
-import React, { useState } from 'react';
+import  { React,useState } from 'react';
 import api from '../api'; 
 import { useNavigate, Link } from 'react-router-dom';
 import image1 from '../assets/image1.jpg';
@@ -48,7 +48,7 @@ const Login = () => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Phone Number, username, or email"
+                placeholder=" username "
                 required
               />
             </div>

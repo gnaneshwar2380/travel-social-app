@@ -58,9 +58,11 @@ function App() {
             element={
               <ProtectedRoute>
                 <Profile />
+                
               </ProtectedRoute>
             }
           />
+          
           <Route
             path="/notifications"
             element={
