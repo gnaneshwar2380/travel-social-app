@@ -1,6 +1,6 @@
 # backend/api/models.py
 from django.db import models
-from django.contrib.auth.models import User
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
@@ -21,13 +21,24 @@ class User(AbstractUser):
 
 
 class JoinableTripPost(models.Model):
+    STATUS_CHOICES = [
+        ('planning', 'Planning'),
+        ('full', 'Full'),
+        ('ongoing', 'Ongoing'),
+        ('completed', 'Completed'),
+    ]
     creator = models.ForeignKey(User,on_delete=models.CASCADE,related_name='joinable_trip')
     title = models.CharField(max_length=100)
     destination = models.TextField()
     budget = models.PositiveIntegerField()
-    duration_days = models.PositiveIntegerField()
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
     details = models.TextField()
-
+    min_memebers = models.PositiveIntegerField(default=1)
+    max_memebers = models.PositiveIntegerField()
+    status = models.CharField( max_length=20,
+        choices=STATUS_CHOICES,
+        default='planning')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -40,7 +51,7 @@ class JoinableTripImage(models.Model):
     def __str__(self):
         return f"Image for Trip {self.trip.id}"
     
-class TripIntrest(models.Model):
+class TripJoinRequest(models.Model):
     STATUS_CHOICES = [('pending','Pending'),('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
     ]
@@ -62,25 +73,33 @@ class TripIntrest(models.Model):
     def __str__(self):
         return f"{self.user} → {self.trip} ({self.status})"
     
-    class TripGroup(models.Model):
+class TripGroup(models.Model):
         trip = models.OneToOneField(
         JoinableTripPost,
         on_delete=models.CASCADE,
         related_name='group'
     )
 
-    name = models.CharField(max_length=100)
+        name = models.CharField(max_length=100)
 
-    members = models.ManyToManyField(
+        members = models.ManyToManyField(
         User,
         related_name='trip_groups'
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+        created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return self.name
-    
+        def __str__(self):
+          return self.name
+
+class TripGroupMeenmber(models.Model):
+    Role_Choices = [('Owner','owner'),('Member','member')] 
+    group = models.ForeignKey(TripGroup, on_delete=models.CASCADE, related_name='members')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='member')
+
+    class Meta:
+        unique_together = ('group', 'user')
 
 class ExperiencePost(models.Model):
     author = models.ForeignKey(User,on_delete=models.CASCADE,related_name='experience_post')
@@ -89,7 +108,7 @@ class ExperiencePost(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    def _str_(self):
         return self.title
     
 class ExperienceDay(models.Model):
@@ -116,7 +135,7 @@ class ExperienceDayImage(models.Model):
         upload_to='experience/days/'
     )
 
-    def __str__(self):
+    def _str_(self):
         return f"Image for {self.day}"
 
 class GeneralPost(models.Model):
@@ -156,7 +175,10 @@ class Like(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'content_type', 'object_id')
+     indexes = [
+        models.Index(fields=["content_type", "object_id"]),
+    ]
+
 
     def __str__(self):
         return f"{self.user} liked {self.content_object}"
