@@ -92,11 +92,11 @@ class TripGroup(models.Model):
         def __str__(self):
           return self.name
 
-class TripGroupMeenmber(models.Model):
+class TripGroupMember(models.Model):
     Role_Choices = [('Owner','owner'),('Member','member')] 
     group = models.ForeignKey(TripGroup, on_delete=models.CASCADE, related_name='members')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='member')
+    role = models.CharField(max_length=10, choices=Role_Choices, default='member')
 
     class Meta:
         unique_together = ('group', 'user')
@@ -226,7 +226,28 @@ class SavedPost(models.Model):
     def __str__(self):
         return f"{self.user} saved {self.content_object}"
 
-    
+class Notification(models.Model):
+
+    NOTIFICATION_TYPES = [
+        ('join_request', 'Join Request'),
+        ('request_accepted', 'Request Accepted'),
+    ]
+
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
+
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.sender} → {self.receiver} ({self.notification_type})"
+
 
 
 
