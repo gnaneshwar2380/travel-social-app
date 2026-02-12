@@ -92,14 +92,21 @@ class TripGroup(models.Model):
         def __str__(self):
           return self.name
 
-class TripGroupMember(models.Model):
-    Role_Choices = [('Owner','owner'),('Member','member')] 
-    group = models.ForeignKey(TripGroup, on_delete=models.CASCADE, related_name='members')
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    role = models.CharField(max_length=10, choices=Role_Choices, default='member')
 
-    class Meta:
-        unique_together = ('group', 'user')
+
+class TripGroupMember(models.Model):
+    group = models.ForeignKey(
+        TripGroup,
+        on_delete=models.CASCADE,
+        related_name="group_memberships"   
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="trip_group_memberships"
+    )
+    joined_at = models.DateTimeField(auto_now_add=True)
+
 
 class ExperiencePost(models.Model):
     author = models.ForeignKey(User,on_delete=models.CASCADE,related_name='experience_post')
