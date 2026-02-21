@@ -1,74 +1,45 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api";
 
-const FollowButton = ({ userId, currentUserId, token }) => {
-  const [status, setStatus] = useState("loading"); // "follow" | "requested" | "mates" | "self"
+const FollowButton = ({ userId, currentUserId }) => {
+  const [status, setStatus] = useState("loading");
 
   useEffect(() => {
-    if (!token || !userId) return;
+    if (!userId) return;
 
-    // Don't show follow button on your own profile
     if (userId === currentUserId) {
       setStatus("self");
       return;
     }
 
-    axios
-      .get(`${import.meta.env.VITE_API_URL}/api/follows/${userId}/is_following/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    api.get(`/follows/${userId}/is_following/`)
       .then((res) => {
-        if (res.data.is_following) setStatus("mates");
-        else setStatus("follow");
+        setStatus(res.data.is_following ? "following" : "follow");
       })
       .catch(() => setStatus("follow"));
-  }, [userId, currentUserId, token]);
+  }, [userId, currentUserId]);
 
   const handleFollow = async () => {
     try {
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/follows/${userId}/follow/`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-               );
-      setStatus("requested");
+      const res = await api.post(`/follows/${userId}/toggle/`);
+      setStatus(res.data.status === "followed" ? "following" : "follow");
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleUnfollow = async () => {
-    try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/follows/${userId}/unfollow/`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setStatus("follow");
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  if (status === "self") return null;
+  if (status === "self" || status === "loading") return null;
 
   return (
     <button
-      onClick={status === "mates" ? handleUnfollow : handleFollow}
+      onClick={handleFollow}
       className={`px-4 py-2 rounded-full text-white font-semibold ${
-        status === "mates"
+        status === "following"
           ? "bg-gray-500 hover:bg-gray-600"
-          : status === "requested"
-          ? "bg-yellow-500 cursor-not-allowed"
-          : "bg-blue-500 hover:bg-blue-600"
+          : "bg-teal-500 hover:bg-teal-600"
       }`}
-      disabled={status === "requested"}
     >
-      {status === "mates"
-        ? "Unfollow"
-        : status === "requested"
-        ? "Requested"
-        : "Follow"}
+      {status === "following" ? "Unfollow" : "Follow"}
     </button>
   );
 };

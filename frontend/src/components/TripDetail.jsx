@@ -16,20 +16,15 @@ export default function TripDetail() {
   useEffect(() => {
     const fetchTripData = async () => {
       try {
-        // Fetch post details
         const resPost = await api.get(`/posts/${id}/`);
         setPost(resPost.data);
         setLiked(resPost.data.is_liked);
         setSaved(resPost.data.is_saved);
 
-        // ✅ Fixed: your /posts/:id/days/ was POST-only, 
-        // so create a read view (TripDayListView) in backend 
-        // or change to /days/?post=<id>
         const resDays = await api.get(`/posts/${id}/days/`);
         setDays(resDays.data);
 
-        // Fetch comments
-        const resComments = await api.get(`/posts/${id}/comment/`);
+        const resComments = await api.get(`/posts/experience/${id}/comments/`);
         setComments(resComments.data);
       } catch (error) {
         console.error("Error fetching trip details:", error);
@@ -40,8 +35,8 @@ export default function TripDetail() {
 
   const handleLike = async () => {
     try {
-      await api.post(`/posts/${id}/like/`);
-      setLiked(!liked);
+      const res = await api.post(`/posts/experience/${id}/like/`);
+      setLiked(res.data.liked);
     } catch (err) {
       console.error("Error liking post:", err);
     }
@@ -49,8 +44,8 @@ export default function TripDetail() {
 
   const handleSave = async () => {
     try {
-      await api.post(`/posts/${id}/save/`);
-      setSaved(!saved);
+      const res = await api.post(`/posts/experience/${id}/save/`);
+      setSaved(res.data.saved);
     } catch (err) {
       console.error("Error saving post:", err);
     }
@@ -60,9 +55,7 @@ export default function TripDetail() {
     e.preventDefault();
     if (!newComment.trim()) return;
     try {
-      const res = await api.post(`/posts/${id}/comment/`, {
-        text: newComment,
-      });
+      const res = await api.post(`/posts/experience/${id}/comments/`, { text: newComment });
       setComments((prev) => [res.data, ...prev]);
       setNewComment("");
     } catch (err) {
@@ -73,12 +66,11 @@ export default function TripDetail() {
   if (!post) return <div className="text-center py-10">Loading trip...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      {/* --- Trip Header --- */}
+    <div className="max-w-4xl mx-auto px-4 py-6 pb-20">
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        {post.cover_photo && (
+        {post.cover_image && (
           <img
-            src={`http://127.0.0.1:8000${post.cover_photo}`}
+            src={`http://127.0.0.1:8000${post.cover_image}`}
             alt={post.title}
             className="w-full h-72 object-cover"
           />
@@ -86,26 +78,19 @@ export default function TripDetail() {
         <div className="p-5">
           <h1 className="text-3xl font-bold text-gray-900">{post.title}</h1>
           <p className="text-gray-500 mt-1">
-            {post.location_summary} •{" "}
             {new Date(post.created_at).toLocaleDateString()}
           </p>
 
-          {/* Like / Save / Share */}
           <div className="flex items-center space-x-4 mt-4">
-            <button onClick={handleLike}>
+            <button onClick={handleLike} className="text-xl">
               {liked ? "❤️ Liked" : "🤍 Like"}
             </button>
-            <button onClick={handleSave}>
+            <button onClick={handleSave} className="text-xl">
               {saved ? "🔖 Saved" : "📑 Save"}
             </button>
             <button
-              onClick={() =>
-                navigator.share({
-                  title: post.title,
-                  text: "Check out this trip!",
-                  url: window.location.href,
-                })
-              }
+              onClick={() => navigator.share({ title: post.title, url: window.location.href })}
+              className="text-xl"
             >
               🔗 Share
             </button>
@@ -113,28 +98,21 @@ export default function TripDetail() {
         </div>
       </div>
 
-      {/* --- Day-wise details --- */}
       <div className="mt-8 space-y-10">
         {days.map((day) => (
-          <div
-            key={day.id}
-            className="bg-white rounded-lg shadow-md overflow-hidden"
-          >
+          <div key={day.id} className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-5 border-b">
               <h2 className="text-2xl font-semibold text-gray-800">
-                Day {day.day_number}: {day.location_name}
+                Day {day.day_number}{day.location_name ? `: ${day.location_name}` : ""}
               </h2>
               {day.date && (
                 <p className="text-sm text-gray-500 mt-1">
                   {new Date(day.date).toLocaleDateString()}
                 </p>
               )}
-              <p className="mt-3 text-gray-700 leading-relaxed">
-                {day.description}
-              </p>
+              <p className="mt-3 text-gray-700 leading-relaxed">{day.description}</p>
             </div>
 
-            {/* --- Photos Slider --- */}
             {day.photos?.length > 0 && (
               <div className="bg-gray-50">
                 <Swiper spaceBetween={8} slidesPerView={1}>
@@ -142,13 +120,11 @@ export default function TripDetail() {
                     <SwiperSlide key={photo.id}>
                       <img
                         src={`http://127.0.0.1:8000${photo.image}`}
-                        alt={photo.caption}
+                        alt={photo.caption || "Day photo"}
                         className="w-full h-96 object-cover"
                       />
                       {photo.caption && (
-                        <p className="text-center text-sm text-gray-600 py-2">
-                          {photo.caption}
-                        </p>
+                        <p className="text-center text-sm text-gray-600 py-2">{photo.caption}</p>
                       )}
                     </SwiperSlide>
                   ))}
@@ -159,7 +135,6 @@ export default function TripDetail() {
         ))}
       </div>
 
-      {/* --- Comments --- */}
       <div className="mt-10 bg-white p-5 rounded-lg shadow">
         <h3 className="text-xl font-semibold mb-4">Comments</h3>
         <form onSubmit={handleComment} className="flex space-x-2 mb-4">
@@ -183,7 +158,7 @@ export default function TripDetail() {
             {comments.map((comment) => (
               <li key={comment.id} className="border-b pb-2">
                 <p className="text-gray-800">
-                  <strong>{comment.user.username}</strong>: {comment.text}
+                  <strong>{comment.user?.username}</strong>: {comment.text}
                 </p>
                 <p className="text-xs text-gray-400">
                   {new Date(comment.created_at).toLocaleString()}

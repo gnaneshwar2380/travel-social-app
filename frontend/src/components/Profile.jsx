@@ -94,9 +94,7 @@ const Profile = () => {
   if (loading) return <div>Loading your profile...</div>;
   if (!profile) return <div>Could not load profile.</div>;
 
-  const profilePictureUrl = profile.profile_picture
-    ? `http://127.0.0.1:8000${profile.profile_picture}`
-    : `http://127.0.0.1:8000/media/profile_pics/default.jpg`;
+  const profilePictureUrl = profile.profile_pic;
 
   return (
     <div className="min-h-screen bg-gray-100">

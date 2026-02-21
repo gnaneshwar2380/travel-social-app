@@ -1,27 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { getForYouFeed, getFollowingFeed,  } from "../api";
+import { getForYouFeed, getFollowingFeed } from "../api";
 import { Search } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import PostCard from "./PostCard";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("foryou");
   const [posts, setPosts] = useState([]);
-  
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isSearching) return;
     const fetchFeed = async () => {
       setLoading(true);
       try {
-        const res =
-          activeTab === "foryou"
-            ? await getForYouFeed()
-            : await getFollowingFeed();
+        const res = activeTab === "foryou"
+          ? await getForYouFeed()
+          : await getFollowingFeed();
         setPosts(res.data || []);
       } catch (err) {
         console.error("Error fetching feed:", err);
@@ -31,83 +26,49 @@ export default function Home() {
       }
     };
     fetchFeed();
-  }, [activeTab, isSearching]);
-
-  
-
-  const clearSearch = () => {
-    setIsSearching(false);
-    
-    setSearchResults([]);
-  };
+  }, [activeTab]);
 
   return (
     <div className="max-w-2xl mx-auto pb-20">
-      {/* Tabs + Search */}
       <div className="sticky top-0 z-40 bg-white border-b px-4 py-3 flex items-center gap-3">
         <button
-          className={`font-semibold text-sm md:text-base px-3 py-2 rounded-full ${
-            activeTab === "foryou"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-500"
+          className={`font-semibold text-sm px-3 py-2 rounded-full ${
+            activeTab === "foryou" ? "text-teal-600 border-b-2 border-teal-600" : "text-gray-500"
           }`}
-          onClick={() => {
-            setActiveTab("foryou");
-            clearSearch();
-          }}
+          onClick={() => setActiveTab("foryou")}
         >
           For You
         </button>
 
         <button
-          className={`font-semibold text-sm md:text-base px-3 py-2 rounded-full ${
-            activeTab === "following"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-500"
+          className={`font-semibold text-sm px-3 py-2 rounded-full ${
+            activeTab === "following" ? "text-teal-600 border-b-2 border-teal-600" : "text-gray-500"
           }`}
-          onClick={() => {
-            setActiveTab("following");
-            clearSearch();
-          }}
+          onClick={() => setActiveTab("following")}
         >
           Following
         </button>
 
-        <form
-        onClick={() => navigate("/search")}
-         className="flex items-center bg-gray-100 rounded-full px-3 py-1 ml-auto w-full max-w-xs">
-          </form>
-          <button onClick={() => navigate("/search")}>
-            <Search size={18} className="text-gray-500 mr-2" />
-         <Search />
-         </button>
-        
+        <button
+          onClick={() => navigate("/search")}
+          className="ml-auto flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2 text-gray-500 text-sm"
+        >
+          <Search size={16} />
+          Search
+        </button>
       </div>
 
-      {/* Feed Section */}
-      
-
-          <div className="mt-4 space-y-6">
-        {loading && (
-          <p className="text-center text-gray-500">Loading posts...</p>
-        )}
+      <div className="mt-4 space-y-6 px-4">
+        {loading && <p className="text-center text-gray-500">Loading posts...</p>}
 
         {!loading && posts.length === 0 && (
-          <p className="text-center text-gray-500">
-            No posts to show yet.
-          </p>
+          <p className="text-center text-gray-500">No posts to show yet.</p>
         )}
 
-        {!loading &&
-          posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
+        {!loading && posts.map((post) => (
+          <PostCard key={post.id} post={post} />
+        ))}
       </div>
-                      
-                  
-            
-        </div>
-      
-    
+    </div>
   );
 }
