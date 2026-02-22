@@ -22,25 +22,21 @@ def notify_trip_owner_on_request(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=TripJoinRequest)
 def handle_request_acceptance(sender, instance, created, **kwargs):
-    # only run when status changes to accepted
     if not created and instance.status == 'accepted':
         trip = instance.trip
         user = instance.user
 
-        # create or get group
         group, _ = TripGroup.objects.get_or_create(
             trip=trip,
             defaults={'name': f"{trip.title} Group"}
         )
 
-        # add member
         TripGroupMember.objects.get_or_create(
             group=group,
             user=user,
             defaults={'role': 'member'}
         )
 
-        # notify user
         Notification.objects.create(
             sender=trip.creator,
             receiver=user,
