@@ -107,7 +107,14 @@ const Profile = () => {
       </Link>
 
       {/* Header */}
-      <div className="h-48 bg-teal-500"></div>
+    <div
+    className="h-48 bg-teal-500"
+    style={
+        profile.cover_pic
+            ? { backgroundImage: `url(http://127.0.0.1:8000${profile.cover_pic})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+            : {}
+    }
+></div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20">
         <div className="flex flex-col items-center bg-white p-6 rounded-lg shadow-lg relative">
