@@ -1,7 +1,3 @@
-"""
-Django settings for core project.
-"""
-
 from pathlib import Path
 from datetime import timedelta
 import os
@@ -14,10 +10,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-# ---------------------------------------------------------------------
-# Installed Apps
-# ---------------------------------------------------------------------
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -26,20 +20,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'channels',
     'rest_framework',
-    'rest_framework_simplejwt',  
+    'rest_framework_simplejwt',
     'corsheaders',
     'api',
 ]
 
-# ---------------------------------------------------------------------
-# Middleware
-# ---------------------------------------------------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # Must be above SessionMiddleware
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',  # Keep enabled
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -47,9 +38,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'core.urls'
 
-# ---------------------------------------------------------------------
-# Templates
-# ---------------------------------------------------------------------
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -74,9 +62,6 @@ CHANNEL_LAYERS = {
     }
 }
 
-# ---------------------------------------------------------------------
-# Database
-# ---------------------------------------------------------------------
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -88,9 +73,6 @@ DATABASES = {
     }
 }
 
-# ---------------------------------------------------------------------
-# Password Validation
-# ---------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -98,29 +80,17 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# ---------------------------------------------------------------------
-# Internationalization
-# ---------------------------------------------------------------------
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# ---------------------------------------------------------------------
-# Static & Media
-# ---------------------------------------------------------------------
 STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
-# ---------------------------------------------------------------------
-# REST Framework & JWT
-# ---------------------------------------------------------------------
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
@@ -135,16 +105,11 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": False,
 }
 
-# ---------------------------------------------------------------------
-# CORS & CSRF
-# ---------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:5174",
 ]
-AUTH_USER_MODEL = 'api.User'
-
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -152,5 +117,9 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+
+CSRF_COOKIE_HTTPONLY = False
+
+AUTH_USER_MODEL = 'api.User'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
