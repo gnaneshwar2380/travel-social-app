@@ -29,7 +29,7 @@ urlpatterns = [
     path('joinable-trips/<int:pk>/', views.JoinableTripDetailView.as_view()),
     path('joinable-trips/<int:trip_id>/join/', views.TripJoinRequestView.as_view()),
     path('joinable-trips/requests/<int:request_id>/approve/', views.TripJoinRequestApproveView.as_view()),
-
+    path('joinable-trips/requests/<int:request_id>/reject/', views.JoinableTripRejectView.as_view()),
     path('search/', views.SearchView.as_view()),
     path('saved/', views.SavedPostsListView.as_view()),
 

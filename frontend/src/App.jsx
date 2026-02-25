@@ -13,7 +13,7 @@ import Messages from "./components/Messages.jsx";
 import Search from "./components/Search.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import UserProfile from "./components/UserProfile.jsx";
-
+import JoinableTripDetail from "./components/JoinableTripDetail.jsx";
 function RegisterAndLogout() {
   localStorage.clear();
   return <Signup />;
@@ -103,6 +103,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+          path="/joinable-trip/:id"
+          element={
+            <ProtectedRoute>
+             <JoinableTripDetail />
+            </ProtectedRoute>
+            }
+         />
           <Route path="/login" element={<Login />} />
           <Route path="/logout" element={<Logout />} />
           <Route path="/signup" element={<RegisterAndLogout />} />

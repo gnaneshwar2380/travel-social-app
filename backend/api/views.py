@@ -543,3 +543,16 @@ class JoinableTripAcceptView(APIView):
         group.members.add(join_request.trip.creator)
 
         return Response({'message': 'Request accepted', 'group_id': group.id})
+
+class JoinableTripRejectView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, request_id):
+        try:
+            join_request = TripJoinRequest.objects.get(pk=request_id, trip__creator=request.user)
+        except TripJoinRequest.DoesNotExist:
+            return Response({'error': 'Request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        join_request.status = 'rejected'
+        join_request.save()
+        return Response({'message': 'Request rejected'})
