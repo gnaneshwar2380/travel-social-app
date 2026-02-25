@@ -467,3 +467,79 @@ class UserPostsView(APIView):
         posts = ExperiencePost.objects.filter(author=user).order_by('-created_at')
         serializer = ExperiencePostSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
+    
+class GeneralPostListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        posts = GeneralPost.objects.all().order_by('-created_at')
+        serializer = GeneralPostSerializer(posts, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request):
+        description = request.data.get('description', '')
+        post = GeneralPost.objects.create(author=request.user, description=description)
+        images = request.FILES.getlist('images')
+        for image in images:
+            GeneralPostImage.objects.create(post=post, image=image)
+        serializer = GeneralPostSerializer(post, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class JoinableTripInterestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, trip_id):
+        try:
+            trip = JoinableTripPost.objects.get(pk=trip_id)
+        except JoinableTripPost.DoesNotExist:
+            return Response({'error': 'Trip not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if trip.creator == request.user:
+            return Response({'error': 'You cannot join your own trip'}, status=status.HTTP_400_BAD_REQUEST)
+
+        join_request, created = TripJoinRequest.objects.get_or_create(
+            user=request.user,
+            trip=trip
+        )
+
+        if not created:
+            return Response({'message': 'Already requested', 'status': join_request.status})
+
+        return Response(TripJoinRequestSerializer(join_request).data, status=status.HTTP_201_CREATED)
+
+
+class JoinableTripRequestsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, trip_id):
+        try:
+            trip = JoinableTripPost.objects.get(pk=trip_id, creator=request.user)
+        except JoinableTripPost.DoesNotExist:
+            return Response({'error': 'Trip not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        requests = TripJoinRequest.objects.filter(trip=trip, status='pending')
+        serializer = TripJoinRequestSerializer(requests, many=True)
+        return Response(serializer.data)
+
+
+class JoinableTripAcceptView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, request_id):
+        try:
+            join_request = TripJoinRequest.objects.get(pk=request_id, trip__creator=request.user)
+        except TripJoinRequest.DoesNotExist:
+            return Response({'error': 'Request not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        join_request.status = 'accepted'
+        join_request.save()
+
+        group, _ = TripGroup.objects.get_or_create(
+            trip=join_request.trip,
+            defaults={'name': f"{join_request.trip.title} Group"}
+        )
+        group.members.add(join_request.user)
+        group.members.add(join_request.trip.creator)
+
+        return Response({'message': 'Request accepted', 'group_id': group.id})
