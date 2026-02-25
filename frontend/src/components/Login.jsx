@@ -1,10 +1,11 @@
 // frontend/src/components/Login.jsx
 import  { React,useState } from 'react';
-import api from '../api'; 
+
 import { useNavigate, Link } from 'react-router-dom';
 import image1 from '../assets/image1.jpg';
 import image2 from '../assets/image2.jpg';
 import image3 from '../assets/image3.jpg';
+import axios from "axios";
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -13,18 +14,18 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login button clicked! Sending data:", { username, password });
     try {
-      const res = await api.post("/token/", { username, password });
-      localStorage.setItem('access_token', res.data.access);
-      localStorage.setItem('refresh_token', res.data.refresh);
-      localStorage.setItem("authTokens", JSON.stringify(res.data));
-      navigate("/"); 
+        const res = await axios.post("http://127.0.0.1:8000/api/token/", { username, password });
+        localStorage.setItem("authTokens", JSON.stringify(res.data));
+        localStorage.setItem("access_token", res.data.access);
+        localStorage.setItem("refresh_token", res.data.refresh);
+        navigate("/");
     } catch (error) {
-      console.error("Login request failed!", error); 
-      alert('Login failed! Check your credentials.');
+        console.error("Login failed!", error);
+        alert("Login failed! Check your credentials.");
     }
-  };
+};
+
 
   return (
     <div className="flex w-full min-h-screen font-sans">

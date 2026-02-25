@@ -22,8 +22,8 @@ const EditProfileModal = ({ onClose, onUploadSuccess }) => {
 
         try {
             await api.patch('/profile/', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
+         headers: { 'Content-Type': 'multipart/form-data' },
+        });
             onUploadSuccess();
             onClose();
         } catch (err) {
