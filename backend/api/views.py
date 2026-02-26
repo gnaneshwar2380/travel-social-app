@@ -105,7 +105,74 @@ class MatesListView(APIView):
         serializer = UserSerializer(mates, many=True)
         return Response(serializer.data)
 
+class TripGroupListView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request):
+        memberships = TripGroupMember.objects.filter(user=request.user).select_related('group')
+        data = []
+        for m in memberships:
+            data.append({
+                'id': m.group.id,
+                'name': m.group.name,
+                'trip_id': m.group.trip.id,
+                'trip_title': m.group.trip.title,
+                'member_count': m.group.group_memberships.count(),
+            })
+        return Response(data)
+
+
+class TripGroupChatView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, group_id):
+        try:
+            group = TripGroup.objects.get(pk=group_id)
+            if not TripGroupMember.objects.filter(group=group, user=request.user).exists():
+                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
+        except TripGroup.DoesNotExist:
+            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+        messages = Message.objects.filter(group=group).order_by('created_at')
+        serializer = MessageSerializer(messages, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request, group_id):
+        try:
+            group = TripGroup.objects.get(pk=group_id)
+            if not TripGroupMember.objects.filter(group=group, user=request.user).exists():
+                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
+        except TripGroup.DoesNotExist:
+            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+        message = Message.objects.create(
+            sender=request.user,
+            group=group,
+            content=request.data.get('content', '')
+        )
+        return Response(MessageSerializer(message, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class TripGroupMembersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, group_id):
+        try:
+            group = TripGroup.objects.get(pk=group_id)
+            if not TripGroupMember.objects.filter(group=group, user=request.user).exists():
+                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
+        except TripGroup.DoesNotExist:
+            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+        members = TripGroupMember.objects.filter(group=group).select_related('user')
+        data = [
+            {
+                'id': m.user.id,
+                'username': m.user.username,
+                'profile_pic': m.user.profile_pic.url if m.user.profile_pic else None,
+                'role': m.role,
+            }
+            for m in members
+        ]
+        return Response(data)
+    
 class ExperiencePostListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -181,12 +248,24 @@ class JoinableTripListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = JoinableTripPostSerializer(data=request.data, context={'request': request})
+        data = request.data.dict() if hasattr(request.data, 'dict') else request.data.copy()
+        serializer = JoinableTripPostSerializer(data=data, context={'request': request})
         if serializer.is_valid():
-            serializer.save(creator=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            trip = serializer.save(creator=request.user)
+            images = request.FILES.getlist('images')
+            for image in images:
+                JoinableTripImage.objects.create(trip=trip, image=image)
+            group, _ = TripGroup.objects.get_or_create(
+                trip=trip,
+                defaults={'name': f"{trip.title} Group"}
+            )
+            TripGroupMember.objects.get_or_create(
+                group=group,
+                user=request.user,
+                defaults={'role': 'admin'}
+            )
+            return Response(JoinableTripPostSerializer(trip, context={'request': request}).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class JoinableTripDetailView(APIView):
     permission_classes = [IsAuthenticated]
@@ -199,6 +278,16 @@ class JoinableTripDetailView(APIView):
         except JoinableTripPost.DoesNotExist:
             return Response({'error': 'Trip not found'}, status=status.HTTP_404_NOT_FOUND)
 
+class GeneralPostDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            post = GeneralPost.objects.get(pk=pk)
+            serializer = GeneralPostSerializer(post, context={'request': request})
+            return Response(serializer.data)
+        except GeneralPost.DoesNotExist:
+            return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
 
 class TripJoinRequestView(APIView):
     permission_classes = [IsAuthenticated]
@@ -339,11 +428,28 @@ class ForYouFeedView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        experience_posts = ExperiencePostSerializer(
-            ExperiencePost.objects.all().order_by('-created_at')[:20],
-            many=True, context={'request': request}
-        ).data
-        return Response(experience_posts)
+        feed = []
+
+        experience_posts = ExperiencePost.objects.all().order_by('-created_at')[:20]
+        for post in experience_posts:
+            data = ExperiencePostSerializer(post, context={'request': request}).data
+            data['post_type'] = 'experience'
+            feed.append(data)
+
+        general_posts = GeneralPost.objects.all().order_by('-created_at')[:20]
+        for post in general_posts:
+            data = GeneralPostSerializer(post, context={'request': request}).data
+            data['post_type'] = 'general'
+            feed.append(data)
+
+        joinable_trips = JoinableTripPost.objects.all().order_by('-created_at')[:20]
+        for post in joinable_trips:
+            data = JoinableTripPostSerializer(post, context={'request': request}).data
+            data['post_type'] = 'joinable'
+            feed.append(data)
+
+        feed.sort(key=lambda x: x['created_at'], reverse=True)
+        return Response(feed)
 
 
 class FollowingFeedView(APIView):
@@ -539,10 +645,31 @@ class JoinableTripAcceptView(APIView):
             trip=join_request.trip,
             defaults={'name': f"{join_request.trip.title} Group"}
         )
-        group.members.add(join_request.user)
-        group.members.add(join_request.trip.creator)
 
-        return Response({'message': 'Request accepted', 'group_id': group.id})
+        TripGroupMember.objects.get_or_create(
+            group=group,
+            user=join_request.user,
+            defaults={'role': 'member'}
+        )
+
+        TripGroupMember.objects.get_or_create(
+            group=group,
+            user=request.user,
+            defaults={'role': 'admin'}
+        )
+
+        Notification.objects.create(
+            sender=request.user,
+            receiver=join_request.user,
+            notification_type='request_accepted',
+            content_type=ContentType.objects.get_for_model(join_request),
+            object_id=join_request.id
+        )
+
+        return Response({
+            'message': 'Request accepted',
+            'group_id': group.id
+        })
 
 class JoinableTripRejectView(APIView):
     permission_classes = [IsAuthenticated]
@@ -569,3 +696,78 @@ class UserSearchForMessageView(APIView):
         ).exclude(id=request.user.id)[:10]
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
+
+class TripGroupListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        memberships = TripGroupMember.objects.filter(user=request.user).select_related('group')
+        groups = [m.group for m in memberships]
+        data = []
+        for group in groups:
+            data.append({
+                'id': group.id,
+                'name': group.name,
+                'trip_id': group.trip.id,
+                'trip_title': group.trip.title,
+                'member_count': group.group_memberships.count(),
+            })
+        return Response(data)
+
+
+class TripGroupChatView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, group_id):
+        try:
+            group = TripGroup.objects.get(pk=group_id)
+            is_member = TripGroupMember.objects.filter(group=group, user=request.user).exists()
+            if not is_member:
+                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
+        except TripGroup.DoesNotExist:
+            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        messages = Message.objects.filter(group=group).order_by('created_at')
+        serializer = MessageSerializer(messages, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request, group_id):
+        try:
+            group = TripGroup.objects.get(pk=group_id)
+            is_member = TripGroupMember.objects.filter(group=group, user=request.user).exists()
+            if not is_member:
+                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
+        except TripGroup.DoesNotExist:
+            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        message = Message.objects.create(
+            sender=request.user,
+            group=group,
+            content=request.data.get('content', '')
+        )
+        return Response(MessageSerializer(message, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class TripGroupMembersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, group_id):
+        try:
+            group = TripGroup.objects.get(pk=group_id)
+            is_member = TripGroupMember.objects.filter(group=group, user=request.user).exists()
+            if not is_member:
+                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
+        except TripGroup.DoesNotExist:
+            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        members = TripGroupMember.objects.filter(group=group).select_related('user')
+        data = [
+            {
+                'id': m.user.id,
+                'username': m.user.username,
+                'profile_pic': m.user.profile_pic.url if m.user.profile_pic else None,
+                'role': m.role,
+            }
+            for m in members
+        ]
+        return Response(data)

@@ -32,6 +32,8 @@ urlpatterns = [
     path('joinable-trips/requests/<int:request_id>/reject/', views.JoinableTripRejectView.as_view()),
     path('search/', views.SearchView.as_view()),
     path('saved/', views.SavedPostsListView.as_view()),
+    path('general-posts/', views.GeneralPostListCreateView.as_view()),
+    path('general-posts/<int:pk>/', views.GeneralPostDetailView.as_view()),
 
     path('messages/conversations/', views.ConversationListView.as_view()),
     path('messages/chat/<int:user_id>/', views.ChatView.as_view()),
@@ -39,4 +41,7 @@ urlpatterns = [
     path('notifications/', views.NotificationListView.as_view()),
     path('notifications/mark_all_read/', views.MarkAllNotificationsReadView.as_view()),
     path('messages/search-users/', views.UserSearchForMessageView.as_view()),
+    path('groups/', views.TripGroupListView.as_view()),
+    path('groups/<int:group_id>/chat/', views.TripGroupChatView.as_view()),
+    path('groups/<int:group_id>/members/', views.TripGroupMembersView.as_view()),
 ]

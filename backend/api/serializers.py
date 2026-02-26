@@ -50,6 +50,7 @@ class JoinableTripPostSerializer(serializers.ModelSerializer):
     is_liked = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
     total_likes = serializers.SerializerMethodField()
+    group_id = serializers.SerializerMethodField()
 
     class Meta:
         model = JoinableTripPost
@@ -57,8 +58,12 @@ class JoinableTripPostSerializer(serializers.ModelSerializer):
             'id', 'creator', 'title', 'destination', 'budget',
             'start_date', 'end_date', 'details', 'min_members',
             'max_members', 'status', 'images', 'created_at',
-            'is_liked', 'is_saved', 'total_likes'
+            'is_liked', 'is_saved', 'total_likes', 'group_id'
         ]
+
+    def get_group_id(self, obj):
+        group = TripGroup.objects.filter(trip=obj).first()
+        return group.id if group else None
 
     def get_is_liked(self, obj):
         request = self.context.get('request')
@@ -80,6 +85,8 @@ class JoinableTripPostSerializer(serializers.ModelSerializer):
         from django.contrib.contenttypes.models import ContentType
         ct = ContentType.objects.get_for_model(obj)
         return Like.objects.filter(content_type=ct, object_id=obj.id).count()
+        
+
 
 
 class TripJoinRequestSerializer(serializers.ModelSerializer):
@@ -208,16 +215,26 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     is_mine = serializers.SerializerMethodField()
+    sender_username = serializers.CharField(source='sender.username', read_only=True)
+    sender_profile_pic = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'receiver', 'content', 'created_at', 'is_read', 'is_mine']
+        fields = ['id', 'sender', 'sender_username', 'sender_profile_pic', 'receiver', 'group', 'content', 'created_at', 'is_read', 'is_mine']
 
     def get_is_mine(self, obj):
         request = self.context.get('request')
         if request:
             return obj.sender == request.user
         return False
+
+    def get_sender_profile_pic(self, obj):
+        if obj.sender.profile_pic:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.sender.profile_pic.url)
+            return obj.sender.profile_pic.url
+        return None
 
 
 class NotificationSerializer(serializers.ModelSerializer):

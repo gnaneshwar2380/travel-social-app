@@ -189,15 +189,16 @@ class SavedPost(models.Model):
         return f"{self.user} saved {self.content_object}"
 
 
-class Message(models.Model):  
+class Message(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages', null=True, blank=True)
+    group = models.ForeignKey(TripGroup, on_delete=models.CASCADE, related_name='messages', null=True, blank=True)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.sender} → {self.receiver}"
+        return f"{self.sender.username}: {self.content[:30]}"
 
 
 class Notification(models.Model):

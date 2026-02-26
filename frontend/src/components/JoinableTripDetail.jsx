@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../api";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
@@ -9,6 +9,7 @@ import "swiper/css/pagination";
 
 export default function JoinableTripDetail() {
     const { id } = useParams();
+    const navigate = useNavigate();
     const [trip, setTrip] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const [joinStatus, setJoinStatus] = useState(null);
@@ -91,6 +92,11 @@ export default function JoinableTripDetail() {
 
     const isCreator = currentUser?.id === trip.creator.id;
 
+    const getProfilePic = (pic) => {
+        if (!pic) return "/default-avatar.png";
+        return pic.startsWith("http") ? pic : `http://127.0.0.1:8000${pic}`;
+    };
+
     const statusColors = {
         planning: "bg-yellow-100 text-yellow-700",
         full: "bg-red-100 text-red-700",
@@ -100,6 +106,7 @@ export default function JoinableTripDetail() {
 
     return (
         <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
+
             {trip.images?.length > 0 && (
                 <Swiper
                     modules={[Navigation, Pagination]}
@@ -110,7 +117,7 @@ export default function JoinableTripDetail() {
                     {trip.images.map((img) => (
                         <SwiperSlide key={img.id}>
                             <img
-                                src={`http://127.0.0.1:8000${img.image}`}
+                                src={getProfilePic(img.image)}
                                 alt="Trip"
                                 className="w-full h-72 object-cover"
                             />
@@ -125,7 +132,7 @@ export default function JoinableTripDetail() {
                         <h1 className="text-2xl font-bold text-gray-900">{trip.title}</h1>
                         <p className="text-gray-500 mt-1">{trip.destination}</p>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[trip.status]}`}>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[trip.status] || 'bg-gray-100 text-gray-700'}`}>
                         {trip.status}
                     </span>
                 </div>
@@ -156,9 +163,7 @@ export default function JoinableTripDetail() {
 
                 <div className="flex items-center gap-3 mt-4 pt-4 border-t">
                     <img
-                        src={trip.creator.profile_pic
-                            ? `http://127.0.0.1:8000${trip.creator.profile_pic}`
-                            : "/default-avatar.png"}
+                        src={getProfilePic(trip.creator.profile_pic)}
                         alt={trip.creator.username}
                         className="w-10 h-10 rounded-full object-cover"
                     />
@@ -169,25 +174,43 @@ export default function JoinableTripDetail() {
                 </div>
 
                 {!isCreator && (
-                    <button
-                        onClick={handleInterest}
-                        disabled={joinStatus === "pending" || joinStatus === "accepted"}
-                        className={`w-full mt-5 py-3 rounded-xl font-bold text-white transition ${
-                            joinStatus === "accepted"
-                                ? "bg-green-500 cursor-not-allowed"
-                                : joinStatus === "pending"
-                                ? "bg-yellow-500 cursor-not-allowed"
-                                : "bg-blue-500 hover:bg-blue-600"
-                        }`}
-                    >
-                        {joinStatus === "accepted"
-                            ? "✅ You're in!"
-                            : joinStatus === "pending"
-                            ? "⏳ Request Pending"
-                            : "🙋 I'm Interested"}
-                    </button>
+                    <div className="mt-5">
+                        {joinStatus === "accepted" ? (
+                            <button
+                                onClick={() => navigate(`/group-chat/${trip.group_id}`)}
+                                className="w-full py-3 rounded-xl font-bold text-white bg-green-500 hover:bg-green-600"
+                            >
+                                ✅ Go to Trip Chat
+                            </button>
+                        ) : joinStatus === "pending" ? (
+                            <button
+                                disabled
+                                className="w-full py-3 rounded-xl font-bold text-white bg-yellow-500 cursor-not-allowed"
+                            >
+                                ⏳ Request Pending
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleInterest}
+                                className="w-full py-3 rounded-xl font-bold text-white bg-blue-500 hover:bg-blue-600"
+                            >
+                                🙋 I'm Interested
+                            </button>
+                        )}
+                    </div>
                 )}
             </div>
+
+            {isCreator && trip.group_id && (
+                <div className="bg-white rounded-xl shadow p-4 mb-6">
+                    <button
+                        onClick={() => navigate(`/group-chat/${trip.group_id}`)}
+                        className="w-full py-3 rounded-xl font-bold text-white bg-teal-500 hover:bg-teal-600"
+                    >
+                        💬 Open Trip Group Chat
+                    </button>
+                </div>
+            )}
 
             {isCreator && pendingRequests.length > 0 && (
                 <div className="bg-white rounded-xl shadow p-6 mb-6">
@@ -199,9 +222,7 @@ export default function JoinableTripDetail() {
                             <div key={req.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <div className="flex items-center gap-3">
                                     <img
-                                        src={req.user.profile_pic
-                                            ? `http://127.0.0.1:8000${req.user.profile_pic}`
-                                            : "/default-avatar.png"}
+                                        src={getProfilePic(req.user.profile_pic)}
                                         alt={req.user.username}
                                         className="w-10 h-10 rounded-full object-cover"
                                     />

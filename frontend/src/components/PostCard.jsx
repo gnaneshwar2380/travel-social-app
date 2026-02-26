@@ -16,9 +16,9 @@ export default function PostCard({ post }) {
     const author = post.author || post.creator;
 
     const rawImage = post.cover_image || post.images?.[0]?.image || null;
-    const imageUrl = rawImage
-        ? rawImage.startsWith("http") ? rawImage : `http://127.0.0.1:8000${rawImage}`
-        : "/default-cover.jpg";
+const imageUrl = rawImage
+    ? rawImage.startsWith("http") ? rawImage : `http://127.0.0.1:8000${rawImage}`
+    : null;
 
     const rawProfilePic = author?.profile_pic || null;
     const profileImage = rawProfilePic
@@ -105,12 +105,18 @@ export default function PostCard({ post }) {
                 </span>
             </div>
 
-            <div className="cursor-pointer" onClick={navigateToPost}>
-                <img
-                    src={imageUrl}
-                    alt={title}
-                    className="w-full h-64 object-cover"
-                />
+            <div className="cursor-pointer bg-gray-100 min-h-48" onClick={navigateToPost}>
+              {imageUrl ? (
+             <img
+            src={imageUrl}
+            alt={title}
+            className="w-full h-64 object-cover"
+              />
+            ) : (
+             <div className="w-full h-64 bg-gradient-to-br from-blue-400 to-teal-500 flex items-center justify-center">
+            <p className="text-white font-bold text-xl">✈️ {title}</p>
+            </div>
+             )}
             </div>
 
             <div className="px-4 py-3">

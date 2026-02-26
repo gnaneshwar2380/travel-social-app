@@ -14,6 +14,7 @@ import Search from "./components/Search.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import UserProfile from "./components/UserProfile.jsx";
 import JoinableTripDetail from "./components/JoinableTripDetail.jsx";
+import TripGroupChat from "./components/TripGroupChat.jsx";
 function RegisterAndLogout() {
   localStorage.clear();
   return <Signup />;
@@ -79,6 +80,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+    path="/group-chat/:groupId"
+    element={
+        <ProtectedRoute>
+            <TripGroupChat />
+        </ProtectedRoute>
+    }
+/>
           <Route
             path="/create-trip"
             element={
