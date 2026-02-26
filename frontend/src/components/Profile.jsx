@@ -44,15 +44,31 @@ const Profile = () => {
 
   useEffect(() => {
     const fetchPosts = async () => {
-      try {
-        const res = await api.get("/posts/");
-        setPosts(res.data);
-      } catch (error) {
-        console.error("Failed to fetch posts", error);
-      }
+        if (!profile) return;
+        try {
+            const res = await api.get(`/posts/${profile.username}/user/`);
+            const expPosts = res.data.map(p => ({ ...p, post_type: 'experience' }));
+
+            const joinRes = await api.get("/joinable-trips/");
+            const joinPosts = joinRes.data
+                .filter(p => p.creator?.id === profile.id)
+                .map(p => ({ ...p, post_type: 'joinable' }));
+
+            const genRes = await api.get("/general-posts/");
+            const genPosts = genRes.data
+                .filter(p => p.author?.id === profile.id)
+                .map(p => ({ ...p, post_type: 'general' }));
+
+            const allPosts = [...expPosts, ...joinPosts, ...genPosts]
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            setPosts(allPosts);
+        } catch (error) {
+            console.error("Failed to fetch posts", error);
+        }
     };
     if (activeTab === "Trips") fetchPosts();
-  }, [activeTab]);
+}, [activeTab, profile]);
 
   useEffect(() => {
     const fetchMates = async () => {
