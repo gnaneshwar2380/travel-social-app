@@ -18,7 +18,9 @@ export default function PostCard({ post }) {
     : "/default-cover.jpg";
 
   const profileImage = post.author?.profile_pic
-    ? `http://127.0.0.1:8000${post.author.profile_pic}`
+    ? post.author.profile_pic.startsWith("http")
+        ? post.author.profile_pic
+        : `http://127.0.0.1:8000${post.author.profile_pic}`
     : "/default-avatar.png";
 
   const handleLike = async () => {
@@ -62,11 +64,11 @@ export default function PostCard({ post }) {
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3">
         <img
-          src={profileImage}
-          alt={post.author?.username}
-          className="w-10 h-10 rounded-full object-cover cursor-pointer"
-          onClick={() => navigate(`/user/${post.author?.username}`)}
-        />
+    src={profileImage}
+    alt={post.author?.username || "User"}
+    className="w-10 h-10 rounded-full object-cover cursor-pointer"
+    onClick={() => navigate(`/user/${post.author?.username}`)}
+/>
         <div>
           <p
             className="font-semibold text-sm cursor-pointer"

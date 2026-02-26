@@ -91,7 +91,9 @@ const Profile = () => {
   if (!profile) return <div>Could not load profile.</div>;
 
   const profilePictureUrl = profile.profile_pic
-    ? `http://127.0.0.1:8000${profile.profile_pic}?t=${timestamp}`
+    ? profile.profile_pic.startsWith("http")
+        ? `${profile.profile_pic}?t=${timestamp}`
+        : `http://127.0.0.1:8000${profile.profile_pic}?t=${timestamp}`
     : "/default-avatar.png";
 
   const coverPicStyle = profile.cover_pic
