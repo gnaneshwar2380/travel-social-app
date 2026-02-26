@@ -556,3 +556,16 @@ class JoinableTripRejectView(APIView):
         join_request.status = 'rejected'
         join_request.save()
         return Response({'message': 'Request rejected'})
+
+class UserSearchForMessageView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        query = request.query_params.get('q', '')
+        if not query:
+            return Response([])
+        users = User.objects.filter(
+            Q(username__icontains=query)
+        ).exclude(id=request.user.id)[:10]
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
