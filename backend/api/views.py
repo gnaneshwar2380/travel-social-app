@@ -556,10 +556,21 @@ class SavedPostsListView(APIView):
         posts = []
         for item in saved:
             obj = item.content_object
+            if obj is None:
+                continue
             if isinstance(obj, ExperiencePost):
-                posts.append(ExperiencePostSerializer(obj, context={'request': request}).data)
+                data = ExperiencePostSerializer(obj, context={'request': request}).data
+                data['post_type'] = 'experience'
+                posts.append(data)
+            elif isinstance(obj, GeneralPost):
+                data = GeneralPostSerializer(obj, context={'request': request}).data
+                data['post_type'] = 'general'
+                posts.append(data)
+            elif isinstance(obj, JoinableTripPost):
+                data = JoinableTripPostSerializer(obj, context={'request': request}).data
+                data['post_type'] = 'joinable'
+                posts.append(data)
         return Response(posts)
-
 
 class UserPostsView(APIView):
     permission_classes = [IsAuthenticated]
