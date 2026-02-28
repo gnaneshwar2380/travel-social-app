@@ -239,21 +239,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class NotificationSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
-    text = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
-        fields = ['id', 'sender', 'notification_type', 'is_read', 'created_at', 'text']
-
-    def get_text(self, obj):
-        if obj.notification_type == 'join_request':
-            return f"{obj.sender.username} requested to join your trip"
-        elif obj.notification_type == 'request_accepted':
-            return f"{obj.sender.username} accepted your join request"
-        elif obj.notification_type == 'follow':
-            return f"{obj.sender.username} started following you"
-        elif obj.notification_type == 'like':
-            return f"{obj.sender.username} liked your post"
-        elif obj.notification_type == 'comment':
-            return f"{obj.sender.username} commented on your post"
-        return "You have a new notification"
+        fields = ['id', 'sender', 'notification_type', 'text', 'is_read', 'created_at', 'object_id']

@@ -209,6 +209,7 @@ class Notification(models.Model):
         ('like', 'Like'),
         ('comment', 'Comment'),
     ]
+    text = models.TextField(blank=True, default='')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications')
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)

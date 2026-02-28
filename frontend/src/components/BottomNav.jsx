@@ -1,56 +1,64 @@
-import { NavLink } from "react-router-dom";
-import { Home, Bell, User, MessageCircle } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Home, Bell, MessageCircle, User } from "lucide-react";
+import api from "../api";
 
 export default function BottomNav() {
-  return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 z-50">
-      <NavLink
-        to="/home"
-        className={({ isActive }) =>
-          `flex flex-col items-center text-sm ${
-            isActive ? "text-blue-600" : "text-gray-500"
-          }`
-        }
-      >
-        <Home size={22} />
-        <span>Home</span>
-      </NavLink>
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [counts, setCounts] = useState({ messages: 0, notifications: 0 });
 
-      <NavLink
-        to="/notifications"
-        className={({ isActive }) =>
-          `flex flex-col items-center text-sm ${
-            isActive ? "text-blue-600" : "text-gray-500"
-          }`
-        }
-      >
-        <Bell size={22} />
-        <span>Alerts</span>
-      </NavLink>
+    useEffect(() => {
+        const fetchCounts = async () => {
+            try {
+                const res = await api.get("/counts/");
+                setCounts(res.data);
+            } catch (err) {
+                console.error("Failed to fetch counts", err);
+            }
+        };
+        fetchCounts();
+        const interval = setInterval(fetchCounts, 15000);
+        return () => clearInterval(interval);
+    }, []);
 
-      <NavLink
-        to="/messages"
-        className={({ isActive }) =>
-          `flex flex-col items-center text-sm ${
-            isActive ? "text-blue-600" : "text-gray-500"
-          }`
-        }
-      >
-        <MessageCircle size={22} />
-        <span>DMs</span>
-      </NavLink>
+    const tabs = [
+        { path: "/", icon: Home, label: "Home" },
+        { path: "/notifications", icon: Bell, label: "Alerts", badge: counts.notifications },
+        { path: "/messages", icon: MessageCircle, label: "DMs", badge: counts.messages },
+        { path: "/profile", icon: User, label: "Profile" },
+    ];
 
-      <NavLink
-        to="/profile"
-        className={({ isActive }) =>
-          `flex flex-col items-center text-sm ${
-            isActive ? "text-blue-600" : "text-gray-500"
-          }`
-        }
-      >
-        <User size={22} />
-        <span>Profile</span>
-      </NavLink>
-    </nav>
-  );
+    return (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t z-50">
+            <div className="flex justify-around items-center py-2">
+                {tabs.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = location.pathname === tab.path;
+                    return (
+                        <button
+                            key={tab.path}
+                            onClick={() => navigate(tab.path)}
+                            className="flex flex-col items-center gap-1 relative px-4 py-1"
+                        >
+                            <div className="relative">
+                                <Icon
+                                    size={24}
+                                    className={isActive ? "text-teal-500" : "text-gray-500"}
+                                />
+                                {tab.badge > 0 && (
+                                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                                        {tab.badge > 9 ? '9+' : tab.badge}
+                                    </span>
+                                )}
+                            </div>
+                            <span className={`text-xs ${isActive ? "text-teal-500" : "text-gray-500"}`}>
+                                {tab.label}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
 }

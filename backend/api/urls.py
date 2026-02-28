@@ -44,4 +44,5 @@ urlpatterns = [
     path('groups/', views.TripGroupListView.as_view()),
     path('groups/<int:group_id>/chat/', views.TripGroupChatView.as_view()),
     path('groups/<int:group_id>/members/', views.TripGroupMembersView.as_view()),
+    path('counts/', views.UnreadCountsView.as_view()),
 ]

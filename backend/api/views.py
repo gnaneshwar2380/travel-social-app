@@ -81,11 +81,11 @@ class FollowToggleView(APIView):
         Notification.objects.create(
             sender=request.user,
             receiver=target,
-            notification_type='follow'
+            notification_type='follow',
+            text=f"{request.user.username} started following you"
         )
         return Response({'status': 'followed'})
-
-
+    
 class IsFollowingView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -344,10 +344,17 @@ class LikeToggleView(APIView):
             liked = False
         else:
             liked = True
+            author = getattr(obj, 'author', None) or getattr(obj, 'creator', None)
+            if author and author != request.user:
+                Notification.objects.create(
+                    sender=request.user,
+                    receiver=author,
+                    notification_type='like',
+                    text=f"{request.user.username} liked your post"
+                )
 
         total_likes = Like.objects.filter(content_type=ct, object_id=obj.id).count()
         return Response({'liked': liked, 'total_likes': total_likes})
-
 
 class SaveToggleView(APIView):
     permission_classes = [IsAuthenticated]
@@ -536,10 +543,15 @@ class NotificationListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        notifications = Notification.objects.filter(receiver=request.user).order_by('-created_at')
-        serializer = NotificationSerializer(notifications, many=True)
-        return Response(serializer.data)
-
+        notifications = Notification.objects.filter(
+            receiver=request.user
+        ).order_by('-created_at')
+        serializer = NotificationSerializer(notifications, many=True, context={'request': request})
+        unread_count = notifications.filter(is_read=False).count()
+        return Response({
+            'notifications': serializer.data,
+            'unread_count': unread_count
+        })
 
 class MarkAllNotificationsReadView(APIView):
     permission_classes = [IsAuthenticated]
@@ -624,9 +636,17 @@ class JoinableTripInterestView(APIView):
         if not created:
             return Response({'message': 'Already requested', 'status': join_request.status})
 
+        Notification.objects.create(
+            sender=request.user,
+            receiver=trip.creator,
+            notification_type='join_request',
+            text=f"{request.user.username} is interested in joining your trip '{trip.title}'",
+            content_type=ContentType.objects.get_for_model(join_request),
+            object_id=join_request.id
+        )
+
         return Response(TripJoinRequestSerializer(join_request).data, status=status.HTTP_201_CREATED)
-
-
+    
 class JoinableTripRequestsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -783,3 +803,21 @@ class TripGroupMembersView(APIView):
             for m in members
         ]
         return Response(data)
+    
+class UnreadCountsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        unread_messages = Message.objects.filter(
+            receiver=request.user,
+            is_read=False,
+            group__isnull=True
+        ).count()
+        unread_notifications = Notification.objects.filter(
+            receiver=request.user,
+            is_read=False
+        ).count()
+        return Response({
+            'messages': unread_messages,
+            'notifications': unread_notifications
+        })
