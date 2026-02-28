@@ -489,14 +489,15 @@ class ConversationListView(APIView):
 
     def get(self, request):
         messages = Message.objects.filter(
-            Q(sender=request.user) | Q(receiver=request.user)
+            Q(sender=request.user, receiver__isnull=False) | 
+            Q(receiver=request.user)
         ).order_by('-created_at')
 
         seen = set()
         conversations = []
         for msg in messages:
             other = msg.receiver if msg.sender == request.user else msg.sender
-            if other.id not in seen:
+            if other and other.id not in seen:
                 seen.add(other.id)
                 conversations.append({
                     'id': other.id,
