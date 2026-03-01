@@ -496,7 +496,7 @@ class ConversationListView(APIView):
 
     def get(self, request):
         messages = Message.objects.filter(
-            Q(sender=request.user, receiver__isnull=False) | 
+            Q(sender=request.user, receiver__isnull=False) |
             Q(receiver=request.user)
         ).order_by('-created_at')
 
@@ -506,13 +506,18 @@ class ConversationListView(APIView):
             other = msg.receiver if msg.sender == request.user else msg.sender
             if other and other.id not in seen:
                 seen.add(other.id)
+                unread_count = Message.objects.filter(
+                    sender=other,
+                    receiver=request.user,
+                    is_read=False
+                ).count()
                 conversations.append({
                     'id': other.id,
                     'user': UserSerializer(other).data,
-                    'last_message': msg.content
+                    'last_message': msg.content,
+                    'unread_count': unread_count,
                 })
         return Response(conversations)
-
 
 class ChatView(APIView):
     permission_classes = [IsAuthenticated]

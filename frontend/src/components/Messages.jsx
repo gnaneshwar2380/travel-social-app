@@ -137,14 +137,30 @@ export default function Messages() {
                             <>
                                 <p className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase bg-gray-50">Direct Messages</p>
                                 {conversations.map((chat) => (
-                                    <div key={chat.id} onClick={() => openChat(chat.user.id, chat.user)} className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 border-b ${activeChat === chat.user.id ? "bg-teal-50" : ""}`}>
-                                        <img src={getProfilePic(chat.user)} alt={chat.user.username} className="w-10 h-10 rounded-full object-cover" />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-sm">@{chat.user.username}</p>
-                                            <p className="text-xs text-gray-400 truncate">{chat.last_message}</p>
-                                        </div>
-                                    </div>
-                                ))}
+    <div key={chat.id} onClick={() => { openChat(chat.user.id, chat.user); setConversations(prev => prev.map(c => c.user.id === chat.user.id ? { ...c, unread_count: 0 } : c)); }} className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 border-b ${activeChat === chat.user.id ? "bg-teal-50" : ""}`}>
+        <div className="relative">
+            <img src={getProfilePic(chat.user)} alt={chat.user.username} className="w-12 h-12 rounded-full object-cover" />
+            {chat.unread_count > 0 && (
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-teal-500 rounded-full border-2 border-white"></span>
+            )}
+        </div>
+        <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+                <p className={`text-sm ${chat.unread_count > 0 ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}>
+                    @{chat.user.username}
+                </p>
+                {chat.unread_count > 0 && (
+                    <span className="bg-teal-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        {chat.unread_count}
+                    </span>
+                )}
+            </div>
+            <p className={`text-xs truncate ${chat.unread_count > 0 ? "font-semibold text-gray-800" : "text-gray-400"}`}>
+                {chat.last_message}
+            </p>
+        </div>
+    </div>
+))}
                             </>
                         )}
                         {groups.length === 0 && conversations.length === 0 && (

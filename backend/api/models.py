@@ -203,21 +203,20 @@ class Message(models.Model):
 
 class Notification(models.Model):
     NOTIFICATION_TYPES = [
-        ('join_request', 'Join Request'),
-        ('request_accepted', 'Request Accepted'),
         ('follow', 'Follow'),
         ('like', 'Like'),
         ('comment', 'Comment'),
+        ('join_request', 'Join Request'),
+        ('request_accepted', 'Request Accepted'),
     ]
-    text = models.TextField(blank=True, default='')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
-    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
-    object_id = models.PositiveIntegerField(null=True, blank=True)
-    content_object = GenericForeignKey('content_type', 'object_id')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_notifications')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    text = models.TextField(blank=True, default='')
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.sender} → {self.receiver} ({self.notification_type})"
+        return f"{self.sender} -> {self.receiver}: {self.notification_type}"
