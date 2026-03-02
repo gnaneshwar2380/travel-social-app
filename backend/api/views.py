@@ -428,6 +428,14 @@ class CommentListCreateView(APIView):
             object_id=obj.id,
             text=request.data.get('text', '')
         )
+        author = getattr(obj, 'author', None) or getattr(obj, 'creator', None)
+        if author and author != request.user:
+            Notification.objects.create(
+                sender=request.user,
+                receiver=author,
+                notification_type='comment',
+                text=f"{request.user.username} commented on your post"
+            )
         return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
 
@@ -464,9 +472,21 @@ class FollowingFeedView(APIView):
 
     def get(self, request):
         following_ids = Follow.objects.filter(follower=request.user).values_list('following_id', flat=True)
-        posts = ExperiencePost.objects.filter(author_id__in=following_ids).order_by('-created_at')
-        serializer = ExperiencePostSerializer(posts, many=True, context={'request': request})
-        return Response(serializer.data)
+        feed = []
+        for post in ExperiencePost.objects.filter(author_id__in=following_ids).order_by('-created_at')[:20]:
+            data = ExperiencePostSerializer(post, context={'request': request}).data
+            data['post_type'] = 'experience'
+            feed.append(data)
+        for post in GeneralPost.objects.filter(author_id__in=following_ids).order_by('-created_at')[:20]:
+            data = GeneralPostSerializer(post, context={'request': request}).data
+            data['post_type'] = 'general'
+            feed.append(data)
+        for post in JoinableTripPost.objects.filter(creator_id__in=following_ids).order_by('-created_at')[:20]:
+            data = JoinableTripPostSerializer(post, context={'request': request}).data
+            data['post_type'] = 'joinable'
+            feed.append(data)
+        feed.sort(key=lambda x: x['created_at'], reverse=True)
+        return Response(feed)
 
 
 class SearchView(APIView):
@@ -523,6 +543,11 @@ class ChatView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
+        Message.objects.filter(
+            sender_id=user_id,
+            receiver=request.user,
+            is_read=False
+        ).update(is_read=True)
         messages = Message.objects.filter(
             Q(sender=request.user, receiver_id=user_id) |
             Q(sender_id=user_id, receiver=request.user)
@@ -699,6 +724,7 @@ class JoinableTripAcceptView(APIView):
             sender=request.user,
             receiver=join_request.user,
             notification_type='request_accepted',
+            text=f"{request.user.username} accepted your request to join the trip '{join_request.trip.title}'",
             content_type=ContentType.objects.get_for_model(join_request),
             object_id=join_request.id
         )
@@ -734,81 +760,9 @@ class UserSearchForMessageView(APIView):
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
 
-class TripGroupListView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        memberships = TripGroupMember.objects.filter(user=request.user).select_related('group')
-        groups = [m.group for m in memberships]
-        data = []
-        for group in groups:
-            data.append({
-                'id': group.id,
-                'name': group.name,
-                'trip_id': group.trip.id,
-                'trip_title': group.trip.title,
-                'member_count': group.group_memberships.count(),
-            })
-        return Response(data)
 
 
-class TripGroupChatView(APIView):
-    permission_classes = [IsAuthenticated]
 
-    def get(self, request, group_id):
-        try:
-            group = TripGroup.objects.get(pk=group_id)
-            is_member = TripGroupMember.objects.filter(group=group, user=request.user).exists()
-            if not is_member:
-                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
-        except TripGroup.DoesNotExist:
-            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        messages = Message.objects.filter(group=group).order_by('created_at')
-        serializer = MessageSerializer(messages, many=True, context={'request': request})
-        return Response(serializer.data)
-
-    def post(self, request, group_id):
-        try:
-            group = TripGroup.objects.get(pk=group_id)
-            is_member = TripGroupMember.objects.filter(group=group, user=request.user).exists()
-            if not is_member:
-                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
-        except TripGroup.DoesNotExist:
-            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        message = Message.objects.create(
-            sender=request.user,
-            group=group,
-            content=request.data.get('content', '')
-        )
-        return Response(MessageSerializer(message, context={'request': request}).data, status=status.HTTP_201_CREATED)
-
-
-class TripGroupMembersView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, group_id):
-        try:
-            group = TripGroup.objects.get(pk=group_id)
-            is_member = TripGroupMember.objects.filter(group=group, user=request.user).exists()
-            if not is_member:
-                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
-        except TripGroup.DoesNotExist:
-            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
-
-        members = TripGroupMember.objects.filter(group=group).select_related('user')
-        data = [
-            {
-                'id': m.user.id,
-                'username': m.user.username,
-                'profile_pic': m.user.profile_pic.url if m.user.profile_pic else None,
-                'role': m.role,
-            }
-            for m in members
-        ]
-        return Response(data)
-    
 class UnreadCountsView(APIView):
     permission_classes = [IsAuthenticated]
 
