@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { getForYouFeed, getFollowingFeed } from "../api";
+import { getForYouFeed } from "../api";
+import api from "../api";
 import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import PostCard from "./PostCard";
@@ -14,10 +15,15 @@ export default function Home() {
     const fetchFeed = async () => {
       setLoading(true);
       try {
-        const res = activeTab === "foryou"
-          ? await getForYouFeed()
-          : await getFollowingFeed();
-        setPosts(res.data || []);
+        let data = [];
+        if (activeTab === "foryou") {
+          const res = await getForYouFeed();
+          data = res.data || [];
+        } else {
+          const res = await api.get("/posts/following/");
+          data = res.data || [];
+        }
+        setPosts(data);
       } catch (err) {
         console.error("Error fetching feed:", err);
         setPosts([]);
@@ -39,7 +45,6 @@ export default function Home() {
         >
           For You
         </button>
-
         <button
           className={`font-semibold text-sm px-3 py-2 rounded-full ${
             activeTab === "following" ? "text-teal-600 border-b-2 border-teal-600" : "text-gray-500"
@@ -48,7 +53,6 @@ export default function Home() {
         >
           Following
         </button>
-
         <button
           onClick={() => navigate("/search")}
           className="ml-auto flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2 text-gray-500 text-sm"
@@ -60,13 +64,11 @@ export default function Home() {
 
       <div className="mt-4 space-y-6 px-4">
         {loading && <p className="text-center text-gray-500">Loading posts...</p>}
-
         {!loading && posts.length === 0 && (
           <p className="text-center text-gray-500">No posts to show yet.</p>
         )}
-
         {!loading && posts.map((post) => (
-          <PostCard key={post.id} post={post} />
+          <PostCard key={`${post.post_type}-${post.id}`} post={post} />
         ))}
       </div>
     </div>
