@@ -495,19 +495,29 @@ class SearchView(APIView):
     def get(self, request):
         query = request.query_params.get('q', '')
         if not query:
-            return Response({'users': [], 'posts': []})
+            return Response({'users': [], 'posts': [], 'general_posts': [], 'trips': []})
 
         users = User.objects.filter(
             Q(username__icontains=query) | Q(full_name__icontains=query)
-        )[:10]
+        ).exclude(id=request.user.id)[:10]
 
         posts = ExperiencePost.objects.filter(
             Q(title__icontains=query)
-        )[:10]
+        ).order_by('-created_at')[:10]
+
+        general_posts = GeneralPost.objects.filter(
+            Q(description__icontains=query)
+        ).order_by('-created_at')[:10]
+
+        trips = JoinableTripPost.objects.filter(
+            Q(title__icontains=query) | Q(destination__icontains=query)
+        ).order_by('-created_at')[:10]
 
         return Response({
             'users': UserSerializer(users, many=True).data,
-            'posts': ExperiencePostSerializer(posts, many=True, context={'request': request}).data
+            'posts': ExperiencePostSerializer(posts, many=True, context={'request': request}).data,
+            'general_posts': GeneralPostSerializer(general_posts, many=True, context={'request': request}).data,
+            'trips': JoinableTripPostSerializer(trips, many=True, context={'request': request}).data,
         })
 
 
