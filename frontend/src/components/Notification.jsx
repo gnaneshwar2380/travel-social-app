@@ -40,27 +40,26 @@ export default function Notification() {
     };
 
     const handleAcceptRequest = async (notif) => {
-        try {
-            await api.post(`/joinable-trips/requests/${notif.object_id}/accept/`);
-            setNotifications(prev => prev.map(n =>
-                n.id === notif.id ? { ...n, is_read: true, accepted: true } : n
-            ));
-            alert("Request accepted! User added to trip group.");
-        } catch (err) {
-            console.error("Failed to accept request", err);
-        }
-    };
+    try {
+        await api.post(`/joinable-trips/requests/${notif.object_id}/accept/`);
+        setNotifications(prev => prev.map(n =>
+            n.id === notif.id ? { ...n, is_read: true, request_status: 'accepted' } : n
+        ));
+    } catch (err) {
+        console.error("Failed to accept request", err);
+    }
+};
 
-    const handleRejectRequest = async (notif) => {
-        try {
-            await api.patch(`/joinable-trips/requests/${notif.object_id}/reject/`);
-            setNotifications(prev => prev.map(n =>
-                n.id === notif.id ? { ...n, is_read: true, rejected: true } : n
-            ));
-        } catch (err) {
-            console.error("Failed to reject request", err);
-        }
-    };
+const handleRejectRequest = async (notif) => {
+    try {
+        await api.patch(`/joinable-trips/requests/${notif.object_id}/reject/`);
+        setNotifications(prev => prev.map(n =>
+            n.id === notif.id ? { ...n, is_read: true, request_status: 'rejected' } : n
+        ));
+    } catch (err) {
+        console.error("Failed to reject request", err);
+    }
+};
 
     const getIcon = (type) => {
         switch (type) {
@@ -154,13 +153,16 @@ export default function Notification() {
 }
 
 function NotifItem({ n, getIcon, getProfilePic, navigate, handleAcceptRequest, handleRejectRequest }) {
+    const showActions = n.notification_type === 'join_request' && 
+                        n.request_status === 'pending';
+    
     return (
         <div className={`flex items-start gap-3 px-4 py-4 border-b ${!n.is_read ? 'bg-blue-50' : 'bg-white'}`}>
             <div className="text-xl">{getIcon(n.notification_type)}</div>
             <img
                 src={getProfilePic(n.sender)}
                 alt={n.sender?.username}
-                className="w-10 h-10 rounded-full object-cover cursor-pointer"
+                className="w-10 h-10 rounded-full object-cover cursor-pointer flex-shrink-0"
                 onClick={() => navigate(`/user/${n.sender?.username}`)}
             />
             <div className="flex-1">
@@ -168,7 +170,7 @@ function NotifItem({ n, getIcon, getProfilePic, navigate, handleAcceptRequest, h
                 <p className="text-xs text-gray-400 mt-1">
                     {new Date(n.created_at).toLocaleString()}
                 </p>
-                {n.notification_type === 'join_request' && !n.accepted && !n.rejected && (
+                {showActions && (
                     <div className="flex gap-2 mt-2">
                         <button
                             onClick={() => handleAcceptRequest(n)}
@@ -184,8 +186,12 @@ function NotifItem({ n, getIcon, getProfilePic, navigate, handleAcceptRequest, h
                         </button>
                     </div>
                 )}
-                {n.accepted && <p className="text-xs text-teal-600 mt-1 font-medium">✅ Accepted</p>}
-                {n.rejected && <p className="text-xs text-gray-400 mt-1 font-medium">Declined</p>}
+                {n.notification_type === 'join_request' && n.request_status === 'accepted' && (
+                    <p className="text-xs text-teal-600 mt-1 font-medium">✅ Accepted</p>
+                )}
+                {n.notification_type === 'join_request' && n.request_status === 'rejected' && (
+                    <p className="text-xs text-gray-400 mt-1 font-medium">Declined</p>
+                )}
             </div>
             {!n.is_read && <div className="w-2 h-2 bg-blue-500 rounded-full mt-1 flex-shrink-0"></div>}
         </div>

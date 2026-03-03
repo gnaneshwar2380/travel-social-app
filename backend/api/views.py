@@ -666,15 +666,16 @@ class JoinableTripInterestView(APIView):
         if not created:
             return Response({'message': 'Already requested', 'status': join_request.status})
 
-        Notification.objects.create(
-            sender=request.user,
-            receiver=trip.creator,
-            notification_type='join_request',
-            text=f"{request.user.username} is interested in joining your trip '{trip.title}'",
-            content_type=ContentType.objects.get_for_model(join_request),
-            object_id=join_request.id
-        )
-
+        Notification.objects.get_or_create(
+    sender=request.user,
+    receiver=trip.creator,
+    notification_type='join_request',
+    object_id=join_request.id,
+    defaults={
+        'text': f"{request.user.username} is interested in joining your trip '{trip.title}'",
+        'content_type': ContentType.objects.get_for_model(join_request),
+    }
+)
         return Response(TripJoinRequestSerializer(join_request).data, status=status.HTTP_201_CREATED)
     
 class JoinableTripRequestsView(APIView):
@@ -780,3 +781,13 @@ class UnreadCountsView(APIView):
             'messages': unread_messages,
             'notifications': unread_notifications
         })
+    
+class JoinableTripMyRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, trip_id):
+        try:
+            join_request = TripJoinRequest.objects.get(user=request.user, trip_id=trip_id)
+            return Response({'status': join_request.status, 'id': join_request.id})
+        except TripJoinRequest.DoesNotExist:
+            return Response({'status': None})

@@ -239,7 +239,18 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class NotificationSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
+    request_status = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
-        fields = ['id', 'sender', 'notification_type', 'text', 'is_read', 'created_at', 'object_id']
+        fields = ['id', 'sender', 'notification_type', 'text', 'is_read', 'created_at', 'object_id', 'request_status']
+
+    def get_request_status(self, obj):
+        if obj.notification_type == 'join_request' and obj.object_id:
+            try:
+                from .models import TripJoinRequest
+                req = TripJoinRequest.objects.get(pk=obj.object_id)
+                return req.status
+            except TripJoinRequest.DoesNotExist:
+                return None
+        return None

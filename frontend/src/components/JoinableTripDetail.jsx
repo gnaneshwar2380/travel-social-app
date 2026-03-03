@@ -31,9 +31,23 @@ export default function JoinableTripDetail() {
                 const commentsRes = await api.get(`/posts/joinable/${id}/comments/`);
                 setComments(commentsRes.data);
 
-                if (tripRes.data.creator.id === userRes.data.id) {
+                const isCreator = tripRes.data.creator.id === userRes.data.id;
+
+                if (isCreator) {
                     const requestsRes = await api.get(`/joinable-trips/${id}/requests/`);
                     setPendingRequests(requestsRes.data);
+                } else {
+                    // Fetch existing join request status for this user
+                    try {
+                        const statusRes = await api.get(`/joinable-trips/${id}/my-request/`);
+                        if (statusRes.data?.status) {
+                            setJoinStatus(statusRes.data.status);
+                        }
+                    } catch (e) {
+                        // No request yet
+                        print(e);
+                        setJoinStatus(null);
+                    }
                 }
             } catch (err) {
                 console.error("Error loading trip:", err);
@@ -60,7 +74,6 @@ export default function JoinableTripDetail() {
         try {
             await api.post(`/joinable-trips/requests/${requestId}/accept/`);
             setPendingRequests((prev) => prev.filter((r) => r.id !== requestId));
-            alert("Request accepted! User has been added to the trip group.");
         } catch (err) {
             console.error("Error accepting request:", err);
         }
@@ -104,9 +117,49 @@ export default function JoinableTripDetail() {
         completed: "bg-gray-100 text-gray-700",
     };
 
+    const renderJoinButton = () => {
+        if (joinStatus === "accepted") {
+            return (
+                <button
+                    onClick={() => navigate(`/group-chat/${trip.group_id}`)}
+                    className="w-full py-3 rounded-xl font-bold text-white bg-green-500 hover:bg-green-600"
+                >
+                    ✅ Go to Trip Chat
+                </button>
+            );
+        }
+        if (joinStatus === "pending") {
+            return (
+                <button
+                    disabled
+                    className="w-full py-3 rounded-xl font-bold text-white bg-yellow-500 cursor-not-allowed"
+                >
+                    ⏳ Request Pending
+                </button>
+            );
+        }
+        if (joinStatus === "rejected") {
+            return (
+                <button
+                    disabled
+                    className="w-full py-3 rounded-xl font-bold text-white bg-gray-400 cursor-not-allowed"
+                >
+                    ❌ Request Declined
+                </button>
+            );
+        }
+        return (
+            <button
+                onClick={handleInterest}
+                className="w-full py-3 rounded-xl font-bold text-white bg-blue-500 hover:bg-blue-600"
+            >
+                🙋 I'm Interested
+            </button>
+        );
+    };
+
     return (
         <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
-
             {trip.images?.length > 0 && (
                 <Swiper
                     modules={[Navigation, Pagination]}
@@ -165,7 +218,8 @@ export default function JoinableTripDetail() {
                     <img
                         src={getProfilePic(trip.creator.profile_pic)}
                         alt={trip.creator.username}
-                        className="w-10 h-10 rounded-full object-cover"
+                        className="w-10 h-10 rounded-full object-cover cursor-pointer"
+                        onClick={() => navigate(`/user/${trip.creator.username}`)}
                     />
                     <div>
                         <p className="text-xs text-gray-400">Trip organized by</p>
@@ -174,30 +228,7 @@ export default function JoinableTripDetail() {
                 </div>
 
                 {!isCreator && (
-                    <div className="mt-5">
-                        {joinStatus === "accepted" ? (
-                            <button
-                                onClick={() => navigate(`/group-chat/${trip.group_id}`)}
-                                className="w-full py-3 rounded-xl font-bold text-white bg-green-500 hover:bg-green-600"
-                            >
-                                ✅ Go to Trip Chat
-                            </button>
-                        ) : joinStatus === "pending" ? (
-                            <button
-                                disabled
-                                className="w-full py-3 rounded-xl font-bold text-white bg-yellow-500 cursor-not-allowed"
-                            >
-                                ⏳ Request Pending
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleInterest}
-                                className="w-full py-3 rounded-xl font-bold text-white bg-blue-500 hover:bg-blue-600"
-                            >
-                                🙋 I'm Interested
-                            </button>
-                        )}
-                    </div>
+                    <div className="mt-5">{renderJoinButton()}</div>
                 )}
             </div>
 
@@ -263,10 +294,7 @@ export default function JoinableTripDetail() {
                         placeholder="Add a comment..."
                         className="flex-grow border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-teal-500"
                     />
-                    <button
-                        type="submit"
-                        className="bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600"
-                    >
+                    <button type="submit" className="bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600">
                         Post
                     </button>
                 </form>
