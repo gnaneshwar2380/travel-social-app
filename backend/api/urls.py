@@ -53,4 +53,7 @@ urlpatterns = [
     path('joinable-trips/<int:trip_id>/my-request/', views.JoinableTripMyRequestView.as_view()),
     path('follows/<int:user_id>/following/', views.UserFollowingView.as_view()),
     path('follows/<int:user_id>/followers/', views.UserFollowersView.as_view()),
+    path('stories/', views.StoryListCreateView.as_view()),
+path('stories/<int:story_id>/view/', views.StoryViewMarkView.as_view()),
+path('stories/mine/', views.MyStoriesView.as_view()),
 ]

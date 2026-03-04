@@ -220,3 +220,27 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.sender} -> {self.receiver}: {self.notification_type}"
+
+class Story(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stories')
+    image = models.ImageField(upload_to='stories/')
+    caption = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"Story by {self.author.username}"
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+
+
+class StoryView(models.Model):
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='views')
+    viewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='viewed_stories')
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('story', 'viewer')

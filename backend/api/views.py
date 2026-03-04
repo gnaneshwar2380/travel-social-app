@@ -10,7 +10,8 @@ from .models import (
     JoinableTripPost, JoinableTripImage, TripJoinRequest,
     TripGroup, TripGroupMember, ExperiencePost, ExperienceDay,
     ExperienceDayImage, GeneralPost, GeneralPostImage,
-    Like, Comment, SavedPost, Message, Notification, Follow
+    Like, Comment, SavedPost, Message, Notification, Follow,Story, StoryView
+
 )
 from .serializers import (
     UserSerializer, RegisterSerializer, JoinableTripPostSerializer,
@@ -874,3 +875,76 @@ class UserFollowersView(APIView):
         follower_ids = Follow.objects.filter(following_id=user_id).values_list('follower_id', flat=True)
         users = User.objects.filter(id__in=follower_ids)
         return Response(UserSerializer(users, many=True).data)
+    
+class StoryListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.utils import timezone
+        following_ids = Follow.objects.filter(follower=request.user).values_list('following_id', flat=True)
+        user_ids = list(following_ids) + [request.user.id]
+        stories = Story.objects.filter(
+            author_id__in=user_ids,
+            expires_at__gt=timezone.now()
+        ).order_by('-created_at')
+
+        grouped = {}
+        for story in stories:
+            uid = story.author.id
+            if uid not in grouped:
+                grouped[uid] = {
+                    'user': UserSerializer(story.author).data,
+                    'stories': [],
+                    'has_unviewed': False,
+                }
+            s_data = StorySerializer(story, context={'request': request}).data
+            grouped[uid]['stories'].append(s_data)
+            if not s_data['is_viewed']:
+                grouped[uid]['has_unviewed'] = True
+
+        return Response(list(grouped.values()))
+
+    def post(self, request):
+        from django.utils import timezone
+        from datetime import timedelta
+        image = request.FILES.get('image')
+        if not image:
+            return Response({'error': 'Image required'}, status=status.HTTP_400_BAD_REQUEST)
+        story = Story.objects.create(
+            author=request.user,
+            image=image,
+            caption=request.data.get('caption', ''),
+            expires_at=timezone.now() + timedelta(hours=24)
+        )
+        return Response(StorySerializer(story, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+
+class StoryViewMarkView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, story_id):
+        try:
+            story = Story.objects.get(pk=story_id)
+        except Story.DoesNotExist:
+            return Response({'error': 'Story not found'}, status=status.HTTP_404_NOT_FOUND)
+        StoryView.objects.get_or_create(story=story, viewer=request.user)
+        return Response({'viewed': True})
+
+class MyStoriesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.utils import timezone
+        stories = Story.objects.filter(
+            author=request.user,
+            expires_at__gt=timezone.now()
+        ).order_by('-created_at')
+        return Response(StorySerializer(stories, many=True, context={'request': request}).data)
+
+    def delete(self, request, story_id):
+        try:
+            story = Story.objects.get(pk=story_id, author=request.user)
+            story.delete()
+            return Response({'deleted': True})
+        except Story.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)

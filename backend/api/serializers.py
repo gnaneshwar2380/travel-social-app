@@ -4,7 +4,7 @@ from .models import (
     JoinableTripPost, JoinableTripImage, TripJoinRequest,
     TripGroup, TripGroupMember, ExperiencePost, ExperienceDay,
     ExperienceDayImage, GeneralPost, GeneralPostImage,
-    Like, Comment, SavedPost, Message, Notification, Follow
+    Like, Comment, SavedPost, Message, Notification, Follow,Story, StoryView
 )
 
 User = get_user_model()
@@ -254,3 +254,21 @@ class NotificationSerializer(serializers.ModelSerializer):
             except TripJoinRequest.DoesNotExist:
                 return None
         return None
+    
+class StorySerializer(serializers.ModelSerializer):
+    author = UserSerializer(read_only=True)
+    is_viewed = serializers.SerializerMethodField()
+    views_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Story
+        fields = ['id', 'author', 'image', 'caption', 'created_at', 'expires_at', 'is_viewed', 'views_count']
+
+    def get_is_viewed(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.views.filter(viewer=request.user).exists()
+        return False
+
+    def get_views_count(self, obj):
+        return obj.views.count()

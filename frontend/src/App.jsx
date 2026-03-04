@@ -16,6 +16,7 @@ import UserProfile from "./components/UserProfile.jsx";
 import JoinableTripDetail from "./components/JoinableTripDetail.jsx";
 import TripGroupChat from "./components/TripGroupChat.jsx";
 import GeneralPostDetail from "./components/GeneralPostDetail.jsx";
+import Stories from "./components/Stories.jsx";
 function RegisterAndLogout() {
   localStorage.clear();
   return <Signup />;
@@ -135,6 +136,11 @@ function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
+      <div className="bg-white border-b">
+    <Stories />
+</div>
+
+<div className="mt-4 space-y-6 px-4"></div>
 
       {shouldShowNav && <BottomNav />}
     </div>
