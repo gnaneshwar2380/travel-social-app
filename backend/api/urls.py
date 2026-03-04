@@ -49,4 +49,8 @@ urlpatterns = [
     path('groups/<int:group_id>/chat/', views.TripGroupChatView.as_view()),
     path('groups/<int:group_id>/members/', views.TripGroupMembersView.as_view()),
     path('counts/', views.UnreadCountsView.as_view()),
+    path('profile/<str:username>/stats/', views.ProfileStatsView.as_view()),
+    path('joinable-trips/<int:trip_id>/my-request/', views.JoinableTripMyRequestView.as_view()),
+    path('follows/<int:user_id>/following/', views.UserFollowingView.as_view()),
+    path('follows/<int:user_id>/followers/', views.UserFollowersView.as_view()),
 ]

@@ -100,7 +100,7 @@ class MatesListView(APIView):
     def get(self, request):
         following_ids = Follow.objects.filter(follower=request.user).values_list('following_id', flat=True)
         follower_ids = Follow.objects.filter(following=request.user).values_list('follower_id', flat=True)
-        mate_ids = set(following_ids) & set(follower_ids)
+        mate_ids = set(following_ids) & set(follower_ids) - {request.user.id}
         mates = User.objects.filter(id__in=mate_ids)
         serializer = UserSerializer(mates, many=True)
         return Response(serializer.data)
@@ -792,6 +792,62 @@ class UnreadCountsView(APIView):
             'notifications': unread_notifications
         })
     
+class ProfileStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, username):
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        experience_count = ExperiencePost.objects.filter(author=user).count()
+        joinable_count = JoinableTripPost.objects.filter(creator=user).count()
+        general_count = GeneralPost.objects.filter(author=user).count()
+        total_posts = experience_count + joinable_count + general_count
+
+        followers_count = Follow.objects.filter(following=user).count()
+        following_count = Follow.objects.filter(follower=user).count()
+
+        total_trips = experience_count + joinable_count
+
+        # Calculate badges
+        badges = []
+        if total_trips >= 1:
+            badges.append({'icon': '✈️', 'label': 'Traveler'})
+        if total_trips >= 5:
+            badges.append({'icon': '🌍', 'label': 'Explorer'})
+        if total_trips >= 10:
+            badges.append({'icon': '🏆', 'label': 'Adventurer'})
+        if joinable_count >= 1:
+            badges.append({'icon': '👥', 'label': 'Trip Organizer'})
+        if joinable_count >= 3:
+            badges.append({'icon': '🎯', 'label': 'Trip Leader'})
+        if followers_count >= 10:
+            badges.append({'icon': '⭐', 'label': 'Rising Star'})
+        if followers_count >= 50:
+            badges.append({'icon': '🔥', 'label': 'Influencer'})
+        if total_posts >= 1:
+            badges.append({'icon': '📝', 'label': 'Storyteller'})
+
+        # Destinations visited
+        destinations = JoinableTripPost.objects.filter(
+            creator=user
+        ).values_list('destination', flat=True)
+        unique_destinations = len(set(destinations))
+
+        return Response({
+            'total_posts': total_posts,
+            'total_trips': total_trips,
+            'experience_count': experience_count,
+            'joinable_count': joinable_count,
+            'general_count': general_count,
+            'followers_count': followers_count,
+            'following_count': following_count,
+            'unique_destinations': unique_destinations,
+            'badges': badges,
+        })
+    
 class JoinableTripMyRequestView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -801,3 +857,20 @@ class JoinableTripMyRequestView(APIView):
             return Response({'status': join_request.status, 'id': join_request.id})
         except TripJoinRequest.DoesNotExist:
             return Response({'status': None})
+        
+class UserFollowingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        following_ids = Follow.objects.filter(follower_id=user_id).values_list('following_id', flat=True)
+        users = User.objects.filter(id__in=following_ids)
+        return Response(UserSerializer(users, many=True).data)
+
+
+class UserFollowersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        follower_ids = Follow.objects.filter(following_id=user_id).values_list('follower_id', flat=True)
+        users = User.objects.filter(id__in=follower_ids)
+        return Response(UserSerializer(users, many=True).data)
