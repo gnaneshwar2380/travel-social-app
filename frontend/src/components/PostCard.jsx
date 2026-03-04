@@ -28,12 +28,14 @@ const imageUrl = rawImage
     const title = post.title || post.destination || post.description?.slice(0, 60);
 
     const navigateToPost = () => {
-        if (postType === 'joinable') {
-            navigate(`/joinable-trip/${post.id}`);
-        } else {
-            navigate(`/trip/${post.id}`);
-        }
-    };
+    if (postType === 'joinable') {
+        navigate(`/joinable-trip/${post.id}`);
+    } else if (postType === 'general') {
+        navigate(`/general-post/${post.id}`);
+    } else {
+        navigate(`/trip/${post.id}`);
+    }
+};
 
     const handleLike = async () => {
         if (loadingLike) return;
