@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api";
 import PostCard from "./PostCard";
+import Stories from "./Stories";
 
 const UserProfile = () => {
     const { username } = useParams();
@@ -119,7 +120,10 @@ const UserProfile = () => {
                     backgroundSize: 'cover',
                     backgroundPosition: 'center'
                 } : {}}
-            ></div>
+            ></div> 
+            <div className="bg-white border-b shadow-sm mt-2">
+              <Stories filterUserId={profile?.id} />
+             </div>
 
             <div className="max-w-4xl mx-auto px-4 -mt-20">
                 <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">

@@ -17,7 +17,7 @@ from .serializers import (
     UserSerializer, RegisterSerializer, JoinableTripPostSerializer,
     TripJoinRequestSerializer, TripGroupSerializer, ExperiencePostSerializer,
     ExperienceDaySerializer, ExperienceDayImageSerializer, GeneralPostSerializer,
-    CommentSerializer, MessageSerializer, NotificationSerializer
+    CommentSerializer, MessageSerializer, NotificationSerializer, StorySerializer
 )
 
 User = get_user_model()
@@ -884,9 +884,9 @@ class StoryListCreateView(APIView):
         following_ids = Follow.objects.filter(follower=request.user).values_list('following_id', flat=True)
         user_ids = list(following_ids) + [request.user.id]
         stories = Story.objects.filter(
-            author_id__in=user_ids,
-            expires_at__gt=timezone.now()
-        ).order_by('-created_at')
+          author_id__in=user_ids,
+             expires_at__gt=timezone.now()
+            ).order_by('created_at')
 
         grouped = {}
         for story in stories:

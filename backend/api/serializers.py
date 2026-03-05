@@ -259,10 +259,11 @@ class StorySerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
     is_viewed = serializers.SerializerMethodField()
     views_count = serializers.SerializerMethodField()
+    viewers = serializers.SerializerMethodField()
 
     class Meta:
         model = Story
-        fields = ['id', 'author', 'image', 'caption', 'created_at', 'expires_at', 'is_viewed', 'views_count']
+        fields = ['id', 'author', 'image', 'caption', 'created_at', 'expires_at', 'is_viewed', 'views_count', 'viewers']
 
     def get_is_viewed(self, obj):
         request = self.context.get('request')
@@ -272,3 +273,12 @@ class StorySerializer(serializers.ModelSerializer):
 
     def get_views_count(self, obj):
         return obj.views.count()
+
+    def get_viewers(self, obj):
+        request = self.context.get('request')
+        if request and obj.author == request.user:
+            return UserSerializer(
+                [v.viewer for v in obj.views.select_related('viewer').all()],
+                many=True
+            ).data
+        return []

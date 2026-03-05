@@ -134,11 +134,13 @@ function App() {
     }
 />
           <Route path="*" element={<Navigate to="/" />} />
+          
         </Routes>
-      </div>
+        </div>
       <div className="bg-white border-b">
     <Stories />
 </div>
+      
 
 <div className="mt-4 space-y-6 px-4"></div>
 
