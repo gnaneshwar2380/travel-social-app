@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { MapPin, X } from 'lucide-react';
 
 const POST_TYPES = [
     {
@@ -26,16 +27,132 @@ const POST_TYPES = [
     },
 ];
 
+// Reusable Location Search Component
+const LocationPicker = ({ value, onChange, onSelect, accentColor = 'teal' }) => {
+    const [query, setQuery] = useState(value || '');
+    const [suggestions, setSuggestions] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [selected, setSelected] = useState(null);
+    const debounceRef = useRef(null);
+
+    useEffect(() => {
+        if (query.length < 3) { setSuggestions([]); return; }
+        if (selected && selected.display_name === query) return;
+        clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(async () => {
+            setLoading(true);
+            try {
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&addressdetails=1`,
+                    { headers: { 'Accept-Language': 'en' } }
+                );
+                const data = await res.json();
+                setSuggestions(data);
+            } catch (err) {
+                console.error("Location search failed", err);
+            } finally {
+                setLoading(false);
+            }
+        }, 400);
+    }, [query]); // eslint-disable-line
+
+    const handleSelect = (place) => {
+        const name = place.display_name.split(',').slice(0, 3).join(',');
+        setQuery(name);
+        setSelected(place);
+        setSuggestions([]);
+        onChange(name);
+        onSelect({ lat: parseFloat(place.lat), lng: parseFloat(place.lon), name });
+    };
+
+    const handleClear = () => {
+        setQuery('');
+        setSelected(null);
+        setSuggestions([]);
+        onChange('');
+        onSelect(null);
+    };
+
+    const ringColor = accentColor === 'teal' ? 'focus:ring-teal-500 focus:border-teal-500'
+        : accentColor === 'blue' ? 'focus:ring-blue-500 focus:border-blue-500'
+        : 'focus:ring-purple-500 focus:border-purple-500';
+
+    return (
+        <div className="relative">
+            <div className="relative">
+                <MapPin size={16} className="absolute left-3 top-3 text-gray-400" />
+                <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setSelected(null); }}
+                    className={`w-full pl-9 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none ${ringColor}`}
+                    placeholder="Search location... e.g. Goa, India"
+                />
+                {query && (
+                    <button type="button" onClick={handleClear} className="absolute right-3 top-3 text-gray-400 hover:text-gray-600">
+                        <X size={14} />
+                    </button>
+                )}
+            </div>
+
+            {/* Loading */}
+            {loading && (
+                <div className="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 px-4 py-2 text-sm text-gray-500">
+                    Searching...
+                </div>
+            )}
+
+            {/* Suggestions */}
+            {suggestions.length > 0 && (
+                <div className="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
+                    {suggestions.map((place) => (
+                        <button
+                            key={place.place_id}
+                            type="button"
+                            onClick={() => handleSelect(place)}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-50 border-b last:border-0"
+                        >
+                            <div className="flex items-start gap-2">
+                                <MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <p className="text-sm font-medium text-gray-800 line-clamp-1">
+                                        {place.display_name.split(',')[0]}
+                                    </p>
+                                    <p className="text-xs text-gray-400 line-clamp-1">
+                                        {place.display_name.split(',').slice(1, 3).join(',')}
+                                    </p>
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* Selected confirmation */}
+            {selected && (
+                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                    <MapPin size={12} /> Location pinned on map ✓
+                </p>
+            )}
+        </div>
+    );
+};
+
 const CreateTrip = () => {
     const [selectedType, setSelectedType] = useState(null);
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
+    // Experience
     const [expTitle, setExpTitle] = useState('');
     const [expCoverImage, setExpCoverImage] = useState(null);
+    const [expLocation, setExpLocation] = useState('');
+    const [expCoords, setExpCoords] = useState(null);
 
+    // Joinable
     const [joinTitle, setJoinTitle] = useState('');
     const [joinDestination, setJoinDestination] = useState('');
+    const [joinCoords, setJoinCoords] = useState(null);
     const [joinBudget, setJoinBudget] = useState('');
     const [joinStartDate, setJoinStartDate] = useState('');
     const [joinEndDate, setJoinEndDate] = useState('');
@@ -44,8 +161,11 @@ const CreateTrip = () => {
     const [joinMaxMembers, setJoinMaxMembers] = useState(10);
     const [joinImages, setJoinImages] = useState([]);
 
+    // General
     const [generalDescription, setGeneralDescription] = useState('');
     const [generalImages, setGeneralImages] = useState([]);
+    const [generalLocation, setGeneralLocation] = useState('');
+    const [generalCoords, setGeneralCoords] = useState(null);
 
     const handleExperienceSubmit = async (e) => {
         e.preventDefault();
@@ -53,6 +173,10 @@ const CreateTrip = () => {
         const formData = new FormData();
         formData.append('title', expTitle);
         if (expCoverImage) formData.append('cover_image', expCoverImage);
+        if (expCoords) {
+            formData.append('latitude', expCoords.lat);
+            formData.append('longitude', expCoords.lng);
+        }
         try {
             const res = await api.post('/posts/', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
@@ -78,6 +202,10 @@ const CreateTrip = () => {
         formData.append('details', joinDetails);
         formData.append('min_members', joinMinMembers);
         formData.append('max_members', joinMaxMembers);
+        if (joinCoords) {
+            formData.append('latitude', joinCoords.lat);
+            formData.append('longitude', joinCoords.lng);
+        }
         joinImages.forEach((img) => formData.append('images', img));
         try {
             const res = await api.post('/joinable-trips/', formData, {
@@ -97,6 +225,10 @@ const CreateTrip = () => {
         setLoading(true);
         const formData = new FormData();
         formData.append('description', generalDescription);
+        if (generalCoords) {
+            formData.append('latitude', generalCoords.lat);
+            formData.append('longitude', generalCoords.lng);
+        }
         generalImages.forEach((img) => formData.append('images', img));
         try {
             await api.post('/general-posts/', formData, {
@@ -139,13 +271,11 @@ const CreateTrip = () => {
 
     return (
         <div className="max-w-2xl mx-auto p-8 pb-20">
-            <button
-                onClick={() => setSelectedType(null)}
-                className="text-teal-600 hover:underline mb-6 block"
-            >
+            <button onClick={() => setSelectedType(null)} className="text-teal-600 hover:underline mb-6 block">
                 ← Back
             </button>
 
+            {/* EXPERIENCE */}
             {selectedType === 'experience' && (
                 <>
                     <h1 className="text-3xl font-bold mb-6 text-gray-800">Create Experience Post</h1>
@@ -171,6 +301,17 @@ const CreateTrip = () => {
                                 required
                             />
                         </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                📍 Location <span className="text-gray-400 font-normal">(optional)</span>
+                            </label>
+                            <LocationPicker
+                                value={expLocation}
+                                onChange={setExpLocation}
+                                onSelect={setExpCoords}
+                                accentColor="teal"
+                            />
+                        </div>
                         <button
                             type="submit"
                             disabled={loading}
@@ -182,6 +323,7 @@ const CreateTrip = () => {
                 </>
             )}
 
+            {/* JOINABLE */}
             {selectedType === 'joinable' && (
                 <>
                     <h1 className="text-3xl font-bold mb-6 text-gray-800">Create Joinable Trip</h1>
@@ -199,13 +341,14 @@ const CreateTrip = () => {
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
-                            <input
-                                type="text"
+                            <LocationPicker
                                 value={joinDestination}
-                                onChange={(e) => setJoinDestination(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
-                                placeholder="e.g. Manali, Himachal Pradesh"
-                                required
+                                onChange={setJoinDestination}
+                                onSelect={(coords) => {
+                                    setJoinCoords(coords);
+                                    if (coords) setJoinDestination(coords.name);
+                                }}
+                                accentColor="blue"
                             />
                         </div>
                         <div>
@@ -214,7 +357,7 @@ const CreateTrip = () => {
                                 type="number"
                                 value={joinBudget}
                                 onChange={(e) => setJoinBudget(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="e.g. 15000"
                                 required
                             />
@@ -226,7 +369,7 @@ const CreateTrip = () => {
                                     type="date"
                                     value={joinStartDate}
                                     onChange={(e) => setJoinStartDate(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     required
                                 />
                             </div>
@@ -236,7 +379,7 @@ const CreateTrip = () => {
                                     type="date"
                                     value={joinEndDate}
                                     onChange={(e) => setJoinEndDate(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     required
                                 />
                             </div>
@@ -247,7 +390,7 @@ const CreateTrip = () => {
                                 value={joinDetails}
                                 onChange={(e) => setJoinDetails(e.target.value)}
                                 rows="4"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="Describe your trip plan, what to expect, what to bring..."
                                 required
                             />
@@ -259,7 +402,7 @@ const CreateTrip = () => {
                                     type="number"
                                     value={joinMinMembers}
                                     onChange={(e) => setJoinMinMembers(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     min="1"
                                 />
                             </div>
@@ -269,7 +412,7 @@ const CreateTrip = () => {
                                     type="number"
                                     value={joinMaxMembers}
                                     onChange={(e) => setJoinMaxMembers(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                                     min="1"
                                 />
                             </div>
@@ -295,6 +438,7 @@ const CreateTrip = () => {
                 </>
             )}
 
+            {/* GENERAL */}
             {selectedType === 'general' && (
                 <>
                     <h1 className="text-3xl font-bold mb-6 text-gray-800">Create General Post</h1>
@@ -305,7 +449,7 @@ const CreateTrip = () => {
                                 value={generalDescription}
                                 onChange={(e) => setGeneralDescription(e.target.value)}
                                 rows="4"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-purple-500 focus:border-purple-500"
                                 placeholder="Share your travel thoughts, tips or memories..."
                                 required
                             />
@@ -318,6 +462,17 @@ const CreateTrip = () => {
                                 accept="image/*"
                                 onChange={(e) => setGeneralImages(Array.from(e.target.files))}
                                 className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                📍 Location <span className="text-gray-400 font-normal">(optional)</span>
+                            </label>
+                            <LocationPicker
+                                value={generalLocation}
+                                onChange={setGeneralLocation}
+                                onSelect={setGeneralCoords}
+                                accentColor="purple"
                             />
                         </div>
                         <button

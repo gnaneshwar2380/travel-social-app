@@ -17,6 +17,7 @@ import JoinableTripDetail from "./components/JoinableTripDetail.jsx";
 import TripGroupChat from "./components/TripGroupChat.jsx";
 import GeneralPostDetail from "./components/GeneralPostDetail.jsx";
 import Stories from "./components/Stories.jsx";
+import Explore from "./components/Explore.jsx";
 function RegisterAndLogout() {
   localStorage.clear();
   return <Signup />;
@@ -130,6 +131,14 @@ function App() {
     element={
         <ProtectedRoute>
             <GeneralPostDetail />
+        </ProtectedRoute>
+    }
+/>
+         <Route
+    path="/explore"
+    element={
+        <ProtectedRoute>
+            <Explore />
         </ProtectedRoute>
     }
 />

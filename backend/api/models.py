@@ -45,6 +45,8 @@ class JoinableTripPost(models.Model):
     max_members = models.PositiveIntegerField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planning')
     created_at = models.DateTimeField(auto_now_add=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.title} - {self.destination}"
@@ -102,6 +104,8 @@ class ExperiencePost(models.Model):
     title = models.CharField(max_length=150)
     cover_image = models.ImageField(upload_to='experience/covers/')
     created_at = models.DateTimeField(auto_now_add=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     def __str__(self):  
         return self.title
@@ -135,6 +139,8 @@ class GeneralPost(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='general_posts')
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     def __str__(self): 
         return f"Post by {self.author}"

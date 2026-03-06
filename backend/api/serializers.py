@@ -55,11 +55,12 @@ class JoinableTripPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = JoinableTripPost
         fields = [
-            'id', 'creator', 'title', 'destination', 'budget',
-            'start_date', 'end_date', 'details', 'min_members',
-            'max_members', 'status', 'images', 'created_at',
-            'is_liked', 'is_saved', 'total_likes', 'group_id'
-        ]
+    'id', 'creator', 'title', 'destination', 'budget',
+    'start_date', 'end_date', 'details', 'min_members',
+    'max_members', 'status', 'images', 'created_at',
+    'is_liked', 'is_saved', 'total_likes', 'group_id',
+    'latitude', 'longitude'
+]
 
     def get_group_id(self, obj):
         group = TripGroup.objects.filter(trip=obj).first()
@@ -137,9 +138,10 @@ class ExperiencePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExperiencePost
         fields = [
-            'id', 'author', 'title', 'cover_image',
-            'days', 'created_at', 'is_liked', 'is_saved', 'total_likes'
-        ]
+    'id', 'author', 'title', 'cover_image',
+    'days', 'created_at', 'is_liked', 'is_saved', 'total_likes',
+    'latitude', 'longitude'
+]
 
     def get_is_liked(self, obj):
         request = self.context.get('request')
@@ -180,7 +182,7 @@ class GeneralPostSerializer(serializers.ModelSerializer):
         model = GeneralPost
         fields = [
             'id', 'author', 'description', 'images',
-            'created_at', 'is_liked', 'is_saved', 'total_likes'
+            'created_at', 'is_liked', 'is_saved', 'total_likes','latitude', 'longitude'
         ]
 
     def get_is_liked(self, obj):

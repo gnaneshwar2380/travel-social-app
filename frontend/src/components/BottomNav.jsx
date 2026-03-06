@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Bell, MessageCircle, User } from "lucide-react";
+import { Home, Bell, MessageCircle, User, Compass } from "lucide-react";
 import api from "../api";
 
 export default function BottomNav() {
@@ -24,6 +24,7 @@ export default function BottomNav() {
 
     const tabs = [
         { path: "/", icon: Home, label: "Home" },
+        { path: "/explore", icon: Compass, label: "Explore" },
         { path: "/notifications", icon: Bell, label: "Alerts", badge: counts.notifications },
         { path: "/messages", icon: MessageCircle, label: "DMs", badge: counts.messages },
         { path: "/profile", icon: User, label: "Profile" },
@@ -39,13 +40,10 @@ export default function BottomNav() {
                         <button
                             key={tab.path}
                             onClick={() => navigate(tab.path)}
-                            className="flex flex-col items-center gap-1 relative px-4 py-1"
+                            className="flex flex-col items-center gap-1 relative px-3 py-1"
                         >
                             <div className="relative">
-                                <Icon
-                                    size={24}
-                                    className={isActive ? "text-teal-500" : "text-gray-500"}
-                                />
+                                <Icon size={24} className={isActive ? "text-teal-500" : "text-gray-500"} />
                                 {tab.badge > 0 && (
                                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center">
                                         {tab.badge > 9 ? '9+' : tab.badge}
