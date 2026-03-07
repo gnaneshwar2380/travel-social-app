@@ -36,12 +36,14 @@ export default function Home() {
   }, [activeTab]);
 
   return (
-    <div className="max-w-2xl mx-auto pb-20">
+    <div className="max-w-2xl mx-auto pb-20 relative">
       {/* Top Nav */}
       <div className="sticky top-0 z-40 bg-white border-b px-4 py-3 flex items-center gap-3">
         <button
           className={`font-semibold text-sm px-3 py-2 rounded-full ${
-            activeTab === "foryou" ? "text-teal-600 border-b-2 border-teal-600" : "text-gray-500"
+            activeTab === "foryou"
+              ? "text-teal-600 border-b-2 border-teal-600"
+              : "text-gray-500"
           }`}
           onClick={() => setActiveTab("foryou")}
         >
@@ -49,7 +51,9 @@ export default function Home() {
         </button>
         <button
           className={`font-semibold text-sm px-3 py-2 rounded-full ${
-            activeTab === "following" ? "text-teal-600 border-b-2 border-teal-600" : "text-gray-500"
+            activeTab === "following"
+              ? "text-teal-600 border-b-2 border-teal-600"
+              : "text-gray-500"
           }`}
           onClick={() => setActiveTab("following")}
         >
@@ -64,8 +68,8 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Stories */}
-      <div className="bg-white border-b shadow-sm">
+      {/* Stories - clipped to page flow, not overlapping nav */}
+      <div className="bg-white border-b overflow-hidden">
         <Stories />
       </div>
 
@@ -83,9 +87,10 @@ export default function Home() {
             <p className="text-sm mt-1">Follow people to see their posts here</p>
           </div>
         )}
-        {!loading && posts.map((post) => (
-          <PostCard key={`${post.post_type}-${post.id}`} post={post} />
-        ))}
+        {!loading &&
+          posts.map((post) => (
+            <PostCard key={`${post.post_type}-${post.id}`} post={post} />
+          ))}
       </div>
     </div>
   );
