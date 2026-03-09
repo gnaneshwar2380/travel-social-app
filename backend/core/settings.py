@@ -1,21 +1,8 @@
 import os
 from pathlib import Path
-import dj_database_url
 from datetime import timedelta
 import pymysql
 pymysql.install_as_MySQLdb()
-
-
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get(
-            'DATABASE_URL',
-            'mysql://root:bunny@127.0.0.1:3306/travel_mates_db'
-        ),
-        conn_max_age=600,
-        ssl_require=False,
-    )
-}
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,8 +10,6 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-2z$wted0ji8=x^+ih!6xy
 
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-
-
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -79,7 +64,37 @@ CHANNEL_LAYERS = {
     }
 }
 
+# Database
+DATABASE_URL = os.environ.get('DATABASE_URL', None)
 
+if DATABASE_URL:
+    import urllib.parse
+    parsed = urllib.parse.urlparse(DATABASE_URL)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': parsed.path[1:],
+            'USER': parsed.username,
+            'PASSWORD': parsed.password,
+            'HOST': parsed.hostname,
+            'PORT': parsed.port or 3306,
+            'OPTIONS': {
+                'ssl': {'ca': None},
+                'connect_timeout': 10,
+            },
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'travel_mates_db',
+            'USER': 'root',
+            'PASSWORD': 'bunny',
+            'HOST': '127.0.0.1',
+            'PORT': '3306',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -97,7 +112,6 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Cloudinary media storage
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
     'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
@@ -128,16 +142,11 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 ).split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_CREDENTIALS = True
-
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
     'http://localhost:5173,http://127.0.0.1:5173'
 ).split(',')
 CSRF_COOKIE_HTTPONLY = False
 
-CSRF_COOKIE_HTTPONLY = False
-
 AUTH_USER_MODEL = 'api.User'
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
