@@ -12,31 +12,23 @@ const Signup = () => {
     const [email, setEmail] = useState('');
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            // ✅ Corrected endpoint (removed extra /api)
-            await api.post('/user/register/', {
-                username,
-                email,
-                password,
-            });
+    e.preventDefault();
+    try {
+        await api.post('/user/register/', { username, email, password });
 
-            // ✅ Auto login after registration
-            const loginResponse = await api.post('/token/', {
-                username,
-                password,
-            });
+        const loginResponse = await api.post('/token/', { username, password });
 
-            localStorage.setItem('access_token', loginResponse.data.access);
-            localStorage.setItem('refresh_token', loginResponse.data.refresh);
+        localStorage.setItem('authTokens', JSON.stringify(loginResponse.data));
+        localStorage.setItem('access_token', loginResponse.data.access);
+        localStorage.setItem('refresh_token', loginResponse.data.refresh);
 
-            alert('Registration successful!');
-            window.location.href = '/';
-        } catch (error) {
-            alert('Registration failed!');
-            console.error(error);
-        }
-    };
+        window.location.href = '/';
+    } catch (error) {
+        console.error(error);
+        alert('Registration failed! ' + (error.response?.data ? JSON.stringify(error.response.data) : ''));
+    }
+};
+ 
 
     return (
         <div className="flex w-full min-h-screen font-sans">

@@ -1,11 +1,10 @@
 // frontend/src/components/Login.jsx
-import  { React,useState } from 'react';
-
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import image1 from '../assets/image1.jpg';
 import image2 from '../assets/image2.jpg';
 import image3 from '../assets/image3.jpg';
-import axios from "axios";
+import { loginUser } from '../api';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -15,7 +14,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-        const res = await axios.post("http://127.0.0.1:8000/api/token/", { username, password });
+        const res = await loginUser({ username, password });
         localStorage.setItem("authTokens", JSON.stringify(res.data));
         localStorage.setItem("access_token", res.data.access);
         localStorage.setItem("refresh_token", res.data.refresh);
@@ -24,8 +23,7 @@ const Login = () => {
         console.error("Login failed!", error);
         alert("Login failed! Check your credentials.");
     }
-};
-
+  };
 
   return (
     <div className="flex w-full min-h-screen font-sans">
@@ -49,7 +47,7 @@ const Login = () => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder=" username "
+                placeholder="Username"
                 required
               />
             </div>

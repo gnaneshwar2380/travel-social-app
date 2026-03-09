@@ -91,7 +91,7 @@ export default function GeneralPostDetail() {
 
     const getProfilePic = (pic) => {
         if (!pic) return "/default-avatar.png";
-        return pic.startsWith("http") ? pic : `http://127.0.0.1:8000${pic}`;
+        return getMediaUrl(pic);
     };
 
     const getImage = (img) => {
