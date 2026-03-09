@@ -5,6 +5,18 @@ from datetime import timedelta
 import pymysql
 pymysql.install_as_MySQLdb()
 
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.environ.get(
+            'DATABASE_URL',
+            'mysql://root:bunny@127.0.0.1:3306/travel_mates_db'
+        ),
+        conn_max_age=600,
+        ssl_require=False,
+    )
+}
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-2z$wted0ji8=x^+ih!6xyp+24=+z!du$oyyd0*lu@uvf1&=(6j')
@@ -67,13 +79,7 @@ CHANNEL_LAYERS = {
     }
 }
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'mysql://root:bunny@127.0.0.1:3306/travel_mates_db'),
-        conn_max_age=600,
-        ssl_require=True,
-    )
-}
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
