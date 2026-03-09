@@ -2,6 +2,8 @@ import os
 from pathlib import Path
 import dj_database_url
 from datetime import timedelta
+import pymysql
+pymysql.install_as_MySQLdb()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -67,11 +69,9 @@ CHANNEL_LAYERS = {
 
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get(
-            'DATABASE_URL',
-            'mysql://root:bunny@127.0.0.1:3306/travel_mates_db'
-        ),
+        default=os.environ.get('DATABASE_URL', 'mysql://root:bunny@127.0.0.1:3306/travel_mates_db'),
         conn_max_age=600,
+        ssl_require=True,
     )
 }
 
