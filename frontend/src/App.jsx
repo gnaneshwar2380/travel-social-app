@@ -142,6 +142,22 @@ function App() {
         </ProtectedRoute>
     }
 />
+<Route
+    path="/joinable-trip/:id/edit"
+    element={
+        <ProtectedRoute>
+            <JoinableTripDetail />
+        </ProtectedRoute>
+    }
+/>
+<Route
+    path="/general-post/:id/edit"
+    element={
+        <ProtectedRoute>
+            <GeneralPostDetail />
+        </ProtectedRoute>
+    }
+/>
           <Route path="*" element={<Navigate to="/" />} />
           
         </Routes>
@@ -149,7 +165,7 @@ function App() {
       
       
 
-<div className="mt-4 space-y-6 px-4"></div>
+
 
       {shouldShowNav && <BottomNav />}
     </div>

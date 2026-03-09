@@ -180,10 +180,8 @@ class GeneralPostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GeneralPost
-        fields = [
-            'id', 'author', 'description', 'images',
-            'created_at', 'is_liked', 'is_saved', 'total_likes','latitude', 'longitude'
-        ]
+        fields = ['id', 'author', 'description', 'images', 'created_at', 
+          'is_liked', 'is_saved', 'total_likes', 'latitude', 'longitude']
 
     def get_is_liked(self, obj):
         request = self.context.get('request')

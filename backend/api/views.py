@@ -649,7 +649,14 @@ class GeneralPostListCreateView(APIView):
 
     def post(self, request):
         description = request.data.get('description', '')
-        post = GeneralPost.objects.create(author=request.user, description=description)
+        latitude = request.data.get('latitude', None)
+        longitude = request.data.get('longitude', None)
+        post = GeneralPost.objects.create(
+            author=request.user,
+            description=description,
+            latitude=latitude,
+            longitude=longitude
+        )
         images = request.FILES.getlist('images')
         for image in images:
             GeneralPostImage.objects.create(post=post, image=image)
@@ -948,3 +955,70 @@ class MyStoriesView(APIView):
             return Response({'deleted': True})
         except Story.DoesNotExist:
             return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+class GeneralPostUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            post = GeneralPost.objects.get(pk=pk, author=request.user)
+        except GeneralPost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        description = request.data.get('description', post.description)
+        post.description = description
+        post.save()
+        return Response(GeneralPostSerializer(post, context={'request': request}).data)
+
+    def delete(self, request, pk):
+        try:
+            post = GeneralPost.objects.get(pk=pk, author=request.user)
+        except GeneralPost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        post.delete()
+        return Response({'deleted': True}, status=status.HTTP_204_NO_CONTENT)
+
+
+class JoinableTripUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            trip = JoinableTripPost.objects.get(pk=pk, creator=request.user)
+        except JoinableTripPost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = JoinableTripPostSerializer(trip, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        try:
+            trip = JoinableTripPost.objects.get(pk=pk, creator=request.user)
+        except JoinableTripPost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        trip.delete()
+        return Response({'deleted': True}, status=status.HTTP_204_NO_CONTENT)
+
+
+class ExperiencePostUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            post = ExperiencePost.objects.get(pk=pk, author=request.user)
+        except ExperiencePost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ExperiencePostSerializer(post, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        try:
+            post = ExperiencePost.objects.get(pk=pk, author=request.user)
+        except ExperiencePost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        post.delete()
+        return Response({'deleted': True}, status=status.HTTP_204_NO_CONTENT)

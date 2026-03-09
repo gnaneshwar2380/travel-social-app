@@ -56,4 +56,7 @@ urlpatterns = [
     path('stories/', views.StoryListCreateView.as_view()),
 path('stories/<int:story_id>/view/', views.StoryViewMarkView.as_view()),
 path('stories/mine/', views.MyStoriesView.as_view()),
+path('general-posts/<int:pk>/edit/', views.GeneralPostUpdateDeleteView.as_view()),
+path('joinable-trips/<int:pk>/edit/', views.JoinableTripUpdateDeleteView.as_view()),
+path('posts/<int:pk>/edit/', views.ExperiencePostUpdateDeleteView.as_view()),
 ]
