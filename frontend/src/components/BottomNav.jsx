@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Bell, MessageCircle, User, Compass } from "lucide-react";
 import api from "../api";
+import useRefresh from "./useRefresh";
 
 export default function BottomNav() {
     const navigate = useNavigate();
     const location = useLocation();
     const [counts, setCounts] = useState({ messages: 0, notifications: 0 });
+    const { triggerHomeRefresh } = useRefresh();
 
     useEffect(() => {
         const fetchCounts = async () => {
@@ -21,6 +23,16 @@ export default function BottomNav() {
         const interval = setInterval(fetchCounts, 15000);
         return () => clearInterval(interval);
     }, []);
+
+    const handleTabClick = (path) => {
+        if (path === "/" && location.pathname === "/") {
+            // Already on home — trigger refresh
+            triggerHomeRefresh();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+            navigate(path);
+        }
+    };
 
     const tabs = [
         { path: "/", icon: Home, label: "Home" },
@@ -39,7 +51,7 @@ export default function BottomNav() {
                     return (
                         <button
                             key={tab.path}
-                            onClick={() => navigate(tab.path)}
+                            onClick={() => handleTabClick(tab.path)}
                             className="flex flex-col items-center gap-1 relative px-3 py-1"
                         >
                             <div className="relative">

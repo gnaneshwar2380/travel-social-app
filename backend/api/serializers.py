@@ -1,10 +1,11 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from .models import (
     JoinableTripPost, JoinableTripImage, TripJoinRequest,
     TripGroup, TripGroupMember, ExperiencePost, ExperienceDay,
     ExperienceDayImage, GeneralPost, GeneralPostImage,
-    Like, Comment, SavedPost, Message, Notification, Follow,Story, StoryView
+    Like, Comment, SavedPost, Message, Notification, Follow, Story, StoryView
 )
 
 User = get_user_model()
@@ -55,12 +56,12 @@ class JoinableTripPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = JoinableTripPost
         fields = [
-    'id', 'creator', 'title', 'destination', 'budget',
-    'start_date', 'end_date', 'details', 'min_members',
-    'max_members', 'status', 'images', 'created_at',
-    'is_liked', 'is_saved', 'total_likes', 'group_id',
-    'latitude', 'longitude'
-]
+            'id', 'creator', 'title', 'destination', 'budget',
+            'start_date', 'end_date', 'details', 'min_members',
+            'max_members', 'status', 'images', 'created_at',
+            'is_liked', 'is_saved', 'total_likes', 'group_id',
+            'latitude', 'longitude'
+        ]
 
     def get_group_id(self, obj):
         group = TripGroup.objects.filter(trip=obj).first()
@@ -69,7 +70,6 @@ class JoinableTripPostSerializer(serializers.ModelSerializer):
     def get_is_liked(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            from django.contrib.contenttypes.models import ContentType
             ct = ContentType.objects.get_for_model(obj)
             return Like.objects.filter(user=request.user, content_type=ct, object_id=obj.id).exists()
         return False
@@ -77,17 +77,13 @@ class JoinableTripPostSerializer(serializers.ModelSerializer):
     def get_is_saved(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            from django.contrib.contenttypes.models import ContentType
             ct = ContentType.objects.get_for_model(obj)
             return SavedPost.objects.filter(user=request.user, content_type=ct, object_id=obj.id).exists()
         return False
 
     def get_total_likes(self, obj):
-        from django.contrib.contenttypes.models import ContentType
         ct = ContentType.objects.get_for_model(obj)
         return Like.objects.filter(content_type=ct, object_id=obj.id).count()
-        
-
 
 
 class TripJoinRequestSerializer(serializers.ModelSerializer):
@@ -138,15 +134,14 @@ class ExperiencePostSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExperiencePost
         fields = [
-    'id', 'author', 'title', 'cover_image',
-    'days', 'created_at', 'is_liked', 'is_saved', 'total_likes',
-    'latitude', 'longitude'
-]
+            'id', 'author', 'title', 'cover_image',
+            'days', 'created_at', 'is_liked', 'is_saved', 'total_likes',
+            'latitude', 'longitude'
+        ]
 
     def get_is_liked(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            from django.contrib.contenttypes.models import ContentType
             ct = ContentType.objects.get_for_model(obj)
             return Like.objects.filter(user=request.user, content_type=ct, object_id=obj.id).exists()
         return False
@@ -154,13 +149,11 @@ class ExperiencePostSerializer(serializers.ModelSerializer):
     def get_is_saved(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            from django.contrib.contenttypes.models import ContentType
             ct = ContentType.objects.get_for_model(obj)
             return SavedPost.objects.filter(user=request.user, content_type=ct, object_id=obj.id).exists()
         return False
 
     def get_total_likes(self, obj):
-        from django.contrib.contenttypes.models import ContentType
         ct = ContentType.objects.get_for_model(obj)
         return Like.objects.filter(content_type=ct, object_id=obj.id).count()
 
@@ -180,13 +173,14 @@ class GeneralPostSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GeneralPost
-        fields = ['id', 'author', 'description', 'images', 'created_at', 
-          'is_liked', 'is_saved', 'total_likes', 'latitude', 'longitude']
+        fields = [
+            'id', 'author', 'description', 'images', 'created_at',
+            'is_liked', 'is_saved', 'total_likes', 'latitude', 'longitude'
+        ]
 
     def get_is_liked(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            from django.contrib.contenttypes.models import ContentType
             ct = ContentType.objects.get_for_model(obj)
             return Like.objects.filter(user=request.user, content_type=ct, object_id=obj.id).exists()
         return False
@@ -194,13 +188,11 @@ class GeneralPostSerializer(serializers.ModelSerializer):
     def get_is_saved(self, obj):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
-            from django.contrib.contenttypes.models import ContentType
             ct = ContentType.objects.get_for_model(obj)
             return SavedPost.objects.filter(user=request.user, content_type=ct, object_id=obj.id).exists()
         return False
 
     def get_total_likes(self, obj):
-        from django.contrib.contenttypes.models import ContentType
         ct = ContentType.objects.get_for_model(obj)
         return Like.objects.filter(content_type=ct, object_id=obj.id).count()
 
@@ -220,7 +212,10 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['id', 'sender', 'sender_username', 'sender_profile_pic', 'receiver', 'group', 'content', 'created_at', 'is_read', 'is_mine']
+        fields = [
+            'id', 'sender', 'sender_username', 'sender_profile_pic',
+            'receiver', 'group', 'content', 'created_at', 'is_read', 'is_mine'
+        ]
 
     def get_is_mine(self, obj):
         request = self.context.get('request')
@@ -239,22 +234,82 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class NotificationSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
-    request_status = serializers.SerializerMethodField()
+    post_thumbnail = serializers.SerializerMethodField()
+    post_url = serializers.SerializerMethodField()
+    comment_text = serializers.SerializerMethodField()
 
     class Meta:
         model = Notification
-        fields = ['id', 'sender', 'notification_type', 'text', 'is_read', 'created_at', 'object_id', 'request_status']
+        fields = [
+            'id', 'sender', 'notification_type', 'text', 'is_read',
+            'created_at', 'object_id', 
+            'post_thumbnail', 'post_url', 'comment_text'
+        ]
 
-    def get_request_status(self, obj):
-        if obj.notification_type == 'join_request' and obj.object_id:
-            try:
-                from .models import TripJoinRequest
-                req = TripJoinRequest.objects.get(pk=obj.object_id)
-                return req.status
-            except TripJoinRequest.DoesNotExist:
+    def get_post_thumbnail(self, obj):
+        request = self.context.get('request')
+        try:
+            if obj.notification_type not in ['like', 'comment']:
                 return None
+            if not obj.content_type or not obj.object_id:
+                return None
+            model = obj.content_type.model_class()
+            if model is None:
+                return None
+            post = model.objects.filter(pk=obj.object_id).first()
+            if not post:
+                return None
+            img = getattr(post, 'cover_image', None)
+            if not img and hasattr(post, 'images'):
+                first = post.images.first()
+                img = first.image if first else None
+            if img and request:
+                return request.build_absolute_uri(img.url)
+        except Exception:
+            pass
         return None
-    
+
+    def get_post_url(self, obj):
+        try:
+            if obj.notification_type not in ['like', 'comment']:
+                return None
+            if not obj.content_type or not obj.object_id:
+                return None
+            model_name = obj.content_type.model
+            if model_name == 'experiencepost':
+                return f'/trip/{obj.object_id}'
+            elif model_name == 'generalpost':
+                return f'/general-post/{obj.object_id}'
+            elif model_name == 'joinabletrippost':
+                return f'/joinable-trip/{obj.object_id}'
+        except Exception:
+            pass
+        return None
+
+    def get_comment_text(self, obj):
+        try:
+            if obj.notification_type != 'comment':
+                return None
+            if not obj.content_type or not obj.object_id:
+                return None
+            model = obj.content_type.model_class()
+            if model is None:
+                return None
+            post = model.objects.filter(pk=obj.object_id).first()
+            if not post:
+                return None
+            post_ct = ContentType.objects.get_for_model(post)
+            comment = Comment.objects.filter(
+                content_type=post_ct,
+                object_id=post.id,
+                user=obj.sender
+            ).order_by('-created_at').first()
+            return comment.text if comment else None
+        except Exception:
+            pass
+        return None
+
+
 class StorySerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
     is_viewed = serializers.SerializerMethodField()
@@ -263,7 +318,10 @@ class StorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Story
-        fields = ['id', 'author', 'image', 'caption', 'created_at', 'expires_at', 'is_viewed', 'views_count', 'viewers']
+        fields = [
+            'id', 'author', 'image', 'caption',
+            'created_at', 'expires_at', 'is_viewed', 'views_count', 'viewers'
+        ]
 
     def get_is_viewed(self, obj):
         request = self.context.get('request')

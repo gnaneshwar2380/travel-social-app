@@ -348,11 +348,14 @@ class LikeToggleView(APIView):
             author = getattr(obj, 'author', None) or getattr(obj, 'creator', None)
             if author and author != request.user:
                 Notification.objects.create(
-                    sender=request.user,
-                    receiver=author,
-                    notification_type='like',
-                    text=f"{request.user.username} liked your post"
-                )
+        sender=request.user,
+        receiver=author,
+        notification_type='like',
+        text=f"{request.user.username} liked your post",
+        content_type=ct,
+        object_id=obj.id
+    
+)
 
         total_likes = Like.objects.filter(content_type=ct, object_id=obj.id).count()
         return Response({'liked': liked, 'total_likes': total_likes})
@@ -431,12 +434,14 @@ class CommentListCreateView(APIView):
         )
         author = getattr(obj, 'author', None) or getattr(obj, 'creator', None)
         if author and author != request.user:
-            Notification.objects.create(
-                sender=request.user,
-                receiver=author,
-                notification_type='comment',
-                text=f"{request.user.username} commented on your post"
-            )
+           Notification.objects.create(
+        sender=request.user,
+        receiver=author,
+        notification_type='comment',
+        text=f"{request.user.username} commented on your post",
+        content_type=ct,
+        object_id=obj.id
+)
         return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
 
