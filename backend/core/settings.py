@@ -150,3 +150,5 @@ CSRF_COOKIE_HTTPONLY = False
 
 AUTH_USER_MODEL = 'api.User'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CORS_ALLOW_ALL_ORIGINS = True
