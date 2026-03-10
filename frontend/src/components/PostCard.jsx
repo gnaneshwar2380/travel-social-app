@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Heart, MessageCircle, Share2, Bookmark, MoreVertical, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../api";
+import { getMediaUrl } from "../utils";
 
 export default function PostCard({ post, onDelete }) {
     const [likes, setLikes] = useState(post.total_likes ?? 0);
@@ -31,15 +32,8 @@ export default function PostCard({ post, onDelete }) {
     const isOwner = currentUserId && author?.id === Number(currentUserId);
 
     const rawImage = post.cover_image || post.images?.[0]?.image || null;
-    const imageUrl = rawImage
-        ? rawImage.startsWith("http") ? rawImage : `http://127.0.0.1:8000${rawImage}`
-        : null;
-
-    const rawProfilePic = author?.profile_pic || null;
-    const profileImage = rawProfilePic
-        ? rawProfilePic.startsWith("http") ? rawProfilePic : `http://127.0.0.1:8000${rawProfilePic}`
-        : "/default-avatar.png";
-
+    const imageUrl = rawImage ? getMediaUrl(rawImage) : null;
+    const profileImage = getMediaUrl(author?.profile_pic);
     const title = post.title || post.destination || post.description?.slice(0, 60);
 
     const navigateToPost = () => {
@@ -105,7 +99,6 @@ export default function PostCard({ post, onDelete }) {
 
     return (
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3">
                 <img src={profileImage} alt={author?.username || "User"}
                     className="w-10 h-10 rounded-full object-cover cursor-pointer"
@@ -120,7 +113,6 @@ export default function PostCard({ post, onDelete }) {
                 <span className={`text-xs text-white px-2 py-1 rounded-full ${postTypeLabel[postType]?.color}`}>
                     {postTypeLabel[postType]?.label}
                 </span>
-                {/* 3-dot menu for owner */}
                 {isOwner && (
                     <div className="relative">
                         <button onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
@@ -143,7 +135,6 @@ export default function PostCard({ post, onDelete }) {
                 )}
             </div>
 
-            {/* Image */}
             <div className="cursor-pointer bg-gray-100 min-h-48" onClick={navigateToPost}>
                 {imageUrl ? (
                     <img src={imageUrl} alt={title} className="w-full h-64 object-cover" />
@@ -154,7 +145,6 @@ export default function PostCard({ post, onDelete }) {
                 )}
             </div>
 
-            {/* Body */}
             <div className="px-4 py-3">
                 <h3 className="font-semibold text-base cursor-pointer" onClick={navigateToPost}>{title}</h3>
                 {postType === 'joinable' && (
@@ -183,7 +173,6 @@ export default function PostCard({ post, onDelete }) {
                 </div>
             </div>
 
-            {/* Close menu on outside click */}
             {showMenu && (
                 <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
             )}

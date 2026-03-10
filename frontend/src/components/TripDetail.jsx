@@ -4,6 +4,7 @@ import api from "../api";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
 import { MoreVertical, Trash2 } from "lucide-react";
+import { getMediaUrl } from "../utils";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -78,24 +79,16 @@ export default function TripDetail() {
 
     const isOwner = currentUser?.id === post.author?.id;
 
-    const coverImageUrl = post.cover_image
-        ? post.cover_image.startsWith("http") ? post.cover_image : `http://127.0.0.1:8000${post.cover_image}`
-        : null;
-
-    const authorProfilePic = post.author?.profile_pic
-        ? post.author.profile_pic.startsWith("http") ? post.author.profile_pic : `http://127.0.0.1:8000${post.author.profile_pic}`
-        : "/default-avatar.png";
-
     return (
         <div className="max-w-3xl mx-auto px-4 py-6 pb-24">
             <div className="bg-white rounded-xl shadow overflow-hidden mb-6">
-                {coverImageUrl && (
-                    <img src={coverImageUrl} alt={post.title} className="w-full h-72 object-cover" />
+                {post.cover_image && (
+                    <img src={getMediaUrl(post.cover_image)} alt={post.title} className="w-full h-72 object-cover" />
                 )}
                 <div className="p-5">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <img src={authorProfilePic} alt={post.author?.username}
+                            <img src={getMediaUrl(post.author?.profile_pic)} alt={post.author?.username}
                                 className="w-10 h-10 rounded-full object-cover cursor-pointer"
                                 onClick={() => navigate(`/user/${post.author?.username}`)} />
                             <div>
@@ -166,7 +159,7 @@ export default function TripDetail() {
                                 {day.photos.map((photo) => (
                                     <SwiperSlide key={photo.id}>
                                         <div className="relative">
-                                            <img src={`http://127.0.0.1:8000${photo.image}`} alt={photo.caption || "Day photo"}
+                                            <img src={getMediaUrl(photo.image)} alt={photo.caption || "Day photo"}
                                                 className="w-full h-80 object-cover" />
                                             {photo.caption && (
                                                 <p className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-40 text-white text-sm text-center py-2">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api';
+import { getMediaUrl } from '../utils';
 
 const EditTrip = () => {
     const { id } = useParams();
@@ -25,9 +26,7 @@ const EditTrip = () => {
         }
     }, [id]);
 
-    useEffect(() => {
-        fetchTripDetails();
-    }, [fetchTripDetails]);
+    useEffect(() => { fetchTripDetails(); }, [fetchTripDetails]);
 
     const handleAddDay = async (e) => {
         e.preventDefault();
@@ -69,11 +68,8 @@ const EditTrip = () => {
         <div className="container mx-auto p-8 pb-20">
             <div className="bg-white p-6 rounded-lg shadow-md mb-8">
                 {trip.cover_image && (
-                    <img
-                        src={`http://127.0.0.1:8000${trip.cover_image}`}
-                        alt={trip.title}
-                        className="w-full h-48 object-cover rounded-lg mb-4"
-                    />
+                    <img src={getMediaUrl(trip.cover_image)} alt={trip.title}
+                        className="w-full h-48 object-cover rounded-lg mb-4" />
                 )}
                 <h1 className="text-3xl font-bold">{trip.title}</h1>
             </div>
@@ -91,12 +87,9 @@ const EditTrip = () => {
                                 {day.photos?.length > 0 && (
                                     <div className="flex gap-2 mt-3 flex-wrap">
                                         {day.photos.map((photo) => (
-                                            <img
-                                                key={photo.id}
-                                                src={`http://127.0.0.1:8000${photo.image}`}
+                                            <img key={photo.id} src={getMediaUrl(photo.image)}
                                                 alt={photo.caption || 'Day photo'}
-                                                className="w-24 h-24 object-cover rounded-lg"
-                                            />
+                                                className="w-24 h-24 object-cover rounded-lg" />
                                         ))}
                                     </div>
                                 )}
@@ -113,48 +106,25 @@ const EditTrip = () => {
                     Add Day {(trip.days?.length || 0) + 1}
                 </h2>
                 <form onSubmit={handleAddDay} className="space-y-4">
-                    <input
-                        type="text"
-                        value={locationName}
-                        onChange={(e) => setLocationName(e.target.value)}
+                    <input type="text" value={locationName} onChange={(e) => setLocationName(e.target.value)}
                         placeholder="Location Name (e.g., North Goa)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        required
-                    />
-                    <input
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    />
-                    <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md" required />
+                    <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md" />
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)}
                         placeholder="Describe the day's events, activities and highlights..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        rows="4"
-                        required
-                    />
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md" rows="4" required />
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Photos for this day
-                        </label>
-                        <input
-                            type="file"
-                            multiple
-                            accept="image/*"
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Photos for this day</label>
+                        <input type="file" multiple accept="image/*"
                             onChange={(e) => setPhotos(Array.from(e.target.files))}
-                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
-                        />
+                            className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100" />
                         {photos.length > 0 && (
                             <p className="text-sm text-gray-500 mt-1">{photos.length} photo(s) selected</p>
                         )}
                     </div>
-                    <button
-                        type="submit"
-                        disabled={uploadingPhotos}
-                        className="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50"
-                    >
+                    <button type="submit" disabled={uploadingPhotos}
+                        className="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50">
                         {uploadingPhotos ? 'Uploading photos...' : 'Add Day to Itinerary'}
                     </button>
                 </form>

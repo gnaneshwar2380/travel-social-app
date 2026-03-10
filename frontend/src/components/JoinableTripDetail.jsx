@@ -4,6 +4,7 @@ import api from "../api";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination } from "swiper/modules";
 import { MoreVertical, Trash2 } from "lucide-react";
+import { getMediaUrl } from "../utils";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -121,11 +122,6 @@ export default function JoinableTripDetail() {
 
     const isCreator = currentUser?.id === trip.creator.id;
 
-    const getProfilePic = (pic) => {
-        if (!pic) return "/default-avatar.png";
-        return pic.startsWith("http") ? pic : `http://127.0.0.1:8000${pic}`;
-    };
-
     const statusColors = {
         planning: "bg-yellow-100 text-yellow-700",
         full: "bg-red-100 text-red-700",
@@ -156,7 +152,7 @@ export default function JoinableTripDetail() {
                     className="rounded-xl overflow-hidden mb-6">
                     {trip.images.map((img) => (
                         <SwiperSlide key={img.id}>
-                            <img src={getProfilePic(img.image)} alt="Trip" className="w-full h-72 object-cover" />
+                            <img src={getMediaUrl(img.image)} alt="Trip" className="w-full h-72 object-cover" />
                         </SwiperSlide>
                     ))}
                 </Swiper>
@@ -174,8 +170,7 @@ export default function JoinableTripDetail() {
                         </span>
                         {isCreator && (
                             <div className="relative">
-                                <button onClick={() => setShowMenu(!showMenu)}
-                                    className="p-1 rounded-full hover:bg-gray-100">
+                                <button onClick={() => setShowMenu(!showMenu)} className="p-1 rounded-full hover:bg-gray-100">
                                     <MoreVertical size={20} className="text-gray-500" />
                                 </button>
                                 {showMenu && (
@@ -183,9 +178,7 @@ export default function JoinableTripDetail() {
                                         <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
                                         <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border z-50 w-36 overflow-hidden">
                                             <button onClick={() => { setEditing(true); setShowMenu(false); }}
-                                                className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                                                ✏️ Edit
-                                            </button>
+                                                className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">✏️ Edit</button>
                                             <button onClick={handleDelete}
                                                 className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2">
                                                 <Trash2 size={14} /> Delete
@@ -198,7 +191,6 @@ export default function JoinableTripDetail() {
                     </div>
                 </div>
 
-                {/* Edit Form */}
                 {editing ? (
                     <div className="mt-4 space-y-3">
                         <div>
@@ -240,22 +232,10 @@ export default function JoinableTripDetail() {
                 ) : (
                     <>
                         <div className="grid grid-cols-2 gap-4 mt-4 text-sm text-gray-600">
-                            <div className="bg-gray-50 rounded-lg p-3">
-                                <p className="text-xs text-gray-400 mb-1">Budget</p>
-                                <p className="font-semibold text-gray-800">₹{trip.budget}</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-3">
-                                <p className="text-xs text-gray-400 mb-1">Members</p>
-                                <p className="font-semibold text-gray-800">{trip.min_members} - {trip.max_members} people</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-3">
-                                <p className="text-xs text-gray-400 mb-1">Start Date</p>
-                                <p className="font-semibold text-gray-800">{new Date(trip.start_date).toLocaleDateString()}</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-3">
-                                <p className="text-xs text-gray-400 mb-1">End Date</p>
-                                <p className="font-semibold text-gray-800">{new Date(trip.end_date).toLocaleDateString()}</p>
-                            </div>
+                            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400 mb-1">Budget</p><p className="font-semibold text-gray-800">₹{trip.budget}</p></div>
+                            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400 mb-1">Members</p><p className="font-semibold text-gray-800">{trip.min_members} - {trip.max_members} people</p></div>
+                            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400 mb-1">Start Date</p><p className="font-semibold text-gray-800">{new Date(trip.start_date).toLocaleDateString()}</p></div>
+                            <div className="bg-gray-50 rounded-lg p-3"><p className="text-xs text-gray-400 mb-1">End Date</p><p className="font-semibold text-gray-800">{new Date(trip.end_date).toLocaleDateString()}</p></div>
                         </div>
                         <div className="mt-4">
                             <h3 className="font-semibold text-gray-800 mb-2">About this trip</h3>
@@ -265,7 +245,7 @@ export default function JoinableTripDetail() {
                 )}
 
                 <div className="flex items-center gap-3 mt-4 pt-4 border-t">
-                    <img src={getProfilePic(trip.creator.profile_pic)} alt={trip.creator.username}
+                    <img src={getMediaUrl(trip.creator.profile_pic)} alt={trip.creator.username}
                         className="w-10 h-10 rounded-full object-cover cursor-pointer"
                         onClick={() => navigate(`/user/${trip.creator.username}`)} />
                     <div>
@@ -291,7 +271,7 @@ export default function JoinableTripDetail() {
                         {pendingRequests.map((req) => (
                             <div key={req.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                 <div className="flex items-center gap-3">
-                                    <img src={getProfilePic(req.user.profile_pic)} alt={req.user.username}
+                                    <img src={getMediaUrl(req.user.profile_pic)} alt={req.user.username}
                                         className="w-10 h-10 rounded-full object-cover" />
                                     <div>
                                         <p className="font-semibold">@{req.user.username}</p>
@@ -299,10 +279,8 @@ export default function JoinableTripDetail() {
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button onClick={() => handleAccept(req.id)}
-                                        className="bg-green-500 text-white px-3 py-1 rounded-lg text-sm">Accept</button>
-                                    <button onClick={() => handleReject(req.id)}
-                                        className="bg-red-500 text-white px-3 py-1 rounded-lg text-sm">Reject</button>
+                                    <button onClick={() => handleAccept(req.id)} className="bg-green-500 text-white px-3 py-1 rounded-lg text-sm">Accept</button>
+                                    <button onClick={() => handleReject(req.id)} className="bg-red-500 text-white px-3 py-1 rounded-lg text-sm">Reject</button>
                                 </div>
                             </div>
                         ))}

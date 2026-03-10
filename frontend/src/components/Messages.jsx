@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import api from "../api";
 import { Send, Search, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getMediaUrl } from "../utils";
 
 export default function Messages() {
     const [groups, setGroups] = useState([]);
@@ -18,33 +19,23 @@ export default function Messages() {
     const navigate = useNavigate();
 
     useEffect(() => {
-    const fetchData = async () => {
-        try {
-            const userRes = await api.get("/profile/");
-            setCurrentUser(userRes.data);
-        } catch (error) {
-            console.error("Error loading user:", error);
-        }
-
-        try {
-            const convsRes = await api.get("/messages/conversations/");
-            setConversations(convsRes.data);
-        } catch (error) {
-            console.error("Error loading conversations:", error);
-        }
-
-        try {
-            const groupsRes = await api.get("/groups/");
-            setGroups(groupsRes.data);
-        } catch (error) {
-            console.error("Error loading groups:", error);
-        }
-
-        setLoading(false);
-    };
-    fetchData();
-}, []);
-         
+        const fetchData = async () => {
+            try {
+                const userRes = await api.get("/profile/");
+                setCurrentUser(userRes.data);
+            } catch (error) { console.error("Error loading user:", error); }
+            try {
+                const convsRes = await api.get("/messages/conversations/");
+                setConversations(convsRes.data);
+            } catch (error) { console.error("Error loading conversations:", error); }
+            try {
+                const groupsRes = await api.get("/groups/");
+                setGroups(groupsRes.data);
+            } catch (error) { console.error("Error loading groups:", error); }
+            setLoading(false);
+        };
+        fetchData();
+    }, []);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -56,9 +47,7 @@ export default function Messages() {
         try {
             const res = await api.get(`/messages/chat/${userId}/`);
             setMessages(res.data);
-        } catch (error) {
-            console.error("Error loading messages:", error);
-        }
+        } catch (error) { console.error("Error loading messages:", error); }
     };
 
     const sendMessage = async (e) => {
@@ -73,9 +62,7 @@ export default function Messages() {
                 if (exists) return prev.map((c) => c.user.id === activeChat ? { ...c, last_message: newMessage } : c);
                 return [{ id: activeChat, user: activeChatUser, last_message: newMessage }, ...prev];
             });
-        } catch (error) {
-            console.error("Error sending message:", error);
-        }
+        } catch (error) { console.error("Error sending message:", error); }
     };
 
     const handleSearch = async (e) => {
@@ -85,14 +72,7 @@ export default function Messages() {
         try {
             const res = await api.get(`/messages/search-users/?q=${q}`);
             setSearchResults(res.data);
-        } catch (err) {
-            console.error("Search failed:", err);
-        }
-    };
-
-    const getProfilePic = (user) => {
-        if (!user?.profile_pic) return "/default-avatar.png";
-        return user.profile_pic.startsWith("http") ? user.profile_pic : `http://127.0.0.1:8000${user.profile_pic}`;
+        } catch (err) { console.error("Search failed:", err); }
     };
 
     const Sidebar = () => (
@@ -101,14 +81,16 @@ export default function Messages() {
                 <h2 className="font-bold text-lg mb-3">Messages</h2>
                 <div className="flex items-center bg-gray-100 rounded-full px-3 py-2 gap-2">
                     <Search size={16} className="text-gray-400" />
-                    <input type="text" placeholder="Search users..." value={searchQuery} onChange={handleSearch} className="bg-transparent outline-none text-sm flex-1" />
+                    <input type="text" placeholder="Search users..." value={searchQuery} onChange={handleSearch}
+                        className="bg-transparent outline-none text-sm flex-1" />
                 </div>
             </div>
             <div className="overflow-y-auto flex-1">
                 {searchQuery ? (
                     searchResults.length > 0 ? searchResults.map((user) => (
-                        <div key={user.id} onClick={() => { setSearchQuery(""); setSearchResults([]); openChat(user.id, user); }} className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 border-b">
-                            <img src={getProfilePic(user)} alt={user.username} className="w-10 h-10 rounded-full object-cover" />
+                        <div key={user.id} onClick={() => { setSearchQuery(""); setSearchResults([]); openChat(user.id, user); }}
+                            className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 border-b">
+                            <img src={getMediaUrl(user.profile_pic)} alt={user.username} className="w-10 h-10 rounded-full object-cover" />
                             <div>
                                 <p className="font-medium text-sm">@{user.username}</p>
                                 <p className="text-xs text-gray-400">{user.full_name}</p>
@@ -123,7 +105,8 @@ export default function Messages() {
                             <>
                                 <p className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase bg-gray-50">Trip Groups</p>
                                 {groups.map((group) => (
-                                    <div key={group.id} onClick={() => navigate(`/group-chat/${group.id}`)} className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 border-b">
+                                    <div key={group.id} onClick={() => navigate(`/group-chat/${group.id}`)}
+                                        className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 border-b">
                                         <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center text-white">✈️</div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-medium text-sm">{group.name}</p>
@@ -137,30 +120,32 @@ export default function Messages() {
                             <>
                                 <p className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase bg-gray-50">Direct Messages</p>
                                 {conversations.map((chat) => (
-    <div key={chat.id} onClick={() => { openChat(chat.user.id, chat.user); setConversations(prev => prev.map(c => c.user.id === chat.user.id ? { ...c, unread_count: 0 } : c)); }} className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 border-b ${activeChat === chat.user.id ? "bg-teal-50" : ""}`}>
-        <div className="relative">
-            <img src={getProfilePic(chat.user)} alt={chat.user.username} className="w-12 h-12 rounded-full object-cover" />
-            {chat.unread_count > 0 && (
-                <span className="absolute bottom-0 right-0 w-3 h-3 bg-teal-500 rounded-full border-2 border-white"></span>
-            )}
-        </div>
-        <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-                <p className={`text-sm ${chat.unread_count > 0 ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}>
-                    @{chat.user.username}
-                </p>
-                {chat.unread_count > 0 && (
-                    <span className="bg-teal-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                        {chat.unread_count}
-                    </span>
-                )}
-            </div>
-            <p className={`text-xs truncate ${chat.unread_count > 0 ? "font-semibold text-gray-800" : "text-gray-400"}`}>
-                {chat.last_message}
-            </p>
-        </div>
-    </div>
-))}
+                                    <div key={chat.id} onClick={() => { openChat(chat.user.id, chat.user); setConversations(prev => prev.map(c => c.user.id === chat.user.id ? { ...c, unread_count: 0 } : c)); }}
+                                        className={`flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 border-b ${activeChat === chat.user.id ? "bg-teal-50" : ""}`}>
+                                        <div className="relative">
+                                            <img src={getMediaUrl(chat.user.profile_pic)} alt={chat.user.username}
+                                                className="w-12 h-12 rounded-full object-cover" />
+                                            {chat.unread_count > 0 && (
+                                                <span className="absolute bottom-0 right-0 w-3 h-3 bg-teal-500 rounded-full border-2 border-white"></span>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <p className={`text-sm ${chat.unread_count > 0 ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}>
+                                                    @{chat.user.username}
+                                                </p>
+                                                {chat.unread_count > 0 && (
+                                                    <span className="bg-teal-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                                        {chat.unread_count}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className={`text-xs truncate ${chat.unread_count > 0 ? "font-semibold text-gray-800" : "text-gray-400"}`}>
+                                                {chat.last_message}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
                             </>
                         )}
                         {groups.length === 0 && conversations.length === 0 && (
@@ -180,7 +165,8 @@ export default function Messages() {
                     <>
                         <div className="p-4 border-b bg-white flex items-center gap-3">
                             <button onClick={() => setActiveChat(null)} className="md:hidden"><ArrowLeft size={20} /></button>
-                            <img src={getProfilePic(activeChatUser)} alt={activeChatUser?.username} className="w-9 h-9 rounded-full object-cover" />
+                            <img src={getMediaUrl(activeChatUser?.profile_pic)} alt={activeChatUser?.username}
+                                className="w-9 h-9 rounded-full object-cover" />
                             <p className="font-semibold">@{activeChatUser?.username}</p>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -198,8 +184,12 @@ export default function Messages() {
                             <div ref={messagesEndRef} />
                         </div>
                         <form onSubmit={sendMessage} className="border-t bg-white p-3 flex items-center gap-2">
-                            <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 p-2 border rounded-full focus:outline-none focus:ring-1 focus:ring-teal-400 text-sm" />
-                            <button type="submit" className="bg-teal-500 text-white p-2 rounded-full hover:bg-teal-600"><Send size={18} /></button>
+                            <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)}
+                                placeholder="Type a message..."
+                                className="flex-1 p-2 border rounded-full focus:outline-none focus:ring-1 focus:ring-teal-400 text-sm" />
+                            <button type="submit" className="bg-teal-500 text-white p-2 rounded-full hover:bg-teal-600">
+                                <Send size={18} />
+                            </button>
                         </form>
                     </>
                 ) : (
