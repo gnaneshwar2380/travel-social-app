@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api";
 import { Heart, Bookmark, ArrowLeft, Send, MoreVertical, Trash2 } from "lucide-react";
+import { getMediaUrl } from "../utils";
 
 export default function GeneralPostDetail() {
     const { id } = useParams();
@@ -89,39 +90,26 @@ export default function GeneralPostDetail() {
         finally { setSaving(false); }
     };
 
-    const getProfilePic = (pic) => {
-        if (!pic) return "/default-avatar.png";
-        return getMediaUrl(pic);
-    };
-
-    const getImage = (img) => {
-        if (!img) return null;
-        return img.startsWith("http") ? img : `http://127.0.0.1:8000${img}`;
-    };
-
     if (loading) return (
         <div className="flex items-center justify-center min-h-screen">
             <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
         </div>
     );
-
     if (!post) return <div className="text-center py-20 text-gray-500">Post not found.</div>;
 
     const author = post.author;
 
     return (
         <div className="max-w-2xl mx-auto pb-24">
-            {/* Header */}
             <div className="sticky top-0 z-40 bg-white border-b px-4 py-3 flex items-center gap-3">
                 <button onClick={() => navigate(-1)} className="p-1">
                     <ArrowLeft size={22} className="text-gray-700" />
                 </button>
-                <img src={getProfilePic(author?.profile_pic)} alt={author?.username}
+                <img src={getMediaUrl(author?.profile_pic)} alt={author?.username}
                     className="w-8 h-8 rounded-full object-cover cursor-pointer"
                     onClick={() => navigate(`/user/${author?.username}`)} />
                 <div className="flex-1">
-                    <p className="font-semibold text-sm cursor-pointer"
-                        onClick={() => navigate(`/user/${author?.username}`)}>
+                    <p className="font-semibold text-sm cursor-pointer" onClick={() => navigate(`/user/${author?.username}`)}>
                         @{author?.username}
                     </p>
                     <p className="text-xs text-gray-400">{new Date(post.created_at).toLocaleDateString()}</p>
@@ -139,9 +127,7 @@ export default function GeneralPostDetail() {
                                 <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
                                 <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border z-50 w-36 overflow-hidden">
                                     <button onClick={() => { setEditing(true); setShowMenu(false); }}
-                                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                                        ✏️ Edit
-                                    </button>
+                                        className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">✏️ Edit</button>
                                     <button onClick={handleDelete}
                                         className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2">
                                         <Trash2 size={14} /> Delete
@@ -153,15 +139,13 @@ export default function GeneralPostDetail() {
                 )}
             </div>
 
-            {/* Images */}
             {post.images?.length > 0 && (
                 <div>
-                    <img src={getImage(post.images[activeImage]?.image)} alt="Post"
-                        className="w-full object-cover max-h-96" />
+                    <img src={getMediaUrl(post.images[activeImage]?.image)} alt="Post" className="w-full object-cover max-h-96" />
                     {post.images.length > 1 && (
                         <div className="flex gap-2 px-4 py-2 overflow-x-auto">
                             {post.images.map((img, i) => (
-                                <img key={img.id} src={getImage(img.image)} alt=""
+                                <img key={img.id} src={getMediaUrl(img.image)} alt=""
                                     onClick={() => setActiveImage(i)}
                                     className={`w-16 h-16 object-cover rounded-lg cursor-pointer flex-shrink-0 ${activeImage === i ? "ring-2 ring-teal-500" : "opacity-70"}`} />
                             ))}
@@ -170,21 +154,14 @@ export default function GeneralPostDetail() {
                 </div>
             )}
 
-            {/* Description / Edit */}
             <div className="px-4 py-4">
                 {editing ? (
                     <div className="space-y-3">
-                        <textarea
-                            value={editDescription}
-                            onChange={(e) => setEditDescription(e.target.value)}
-                            rows={4}
-                            className="w-full border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-teal-400"
-                        />
+                        <textarea value={editDescription} onChange={(e) => setEditDescription(e.target.value)}
+                            rows={4} className="w-full border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-teal-400" />
                         <div className="flex gap-2">
                             <button onClick={() => setEditing(false)}
-                                className="flex-1 py-2 rounded-full border text-gray-600 text-sm font-semibold">
-                                Cancel
-                            </button>
+                                className="flex-1 py-2 rounded-full border text-gray-600 text-sm font-semibold">Cancel</button>
                             <button onClick={handleSaveEdit} disabled={saving}
                                 className="flex-1 py-2 rounded-full bg-teal-500 text-white text-sm font-semibold">
                                 {saving ? "Saving..." : "Save"}
@@ -194,7 +171,6 @@ export default function GeneralPostDetail() {
                 ) : (
                     <p className="text-gray-800 text-base leading-relaxed">{post.description}</p>
                 )}
-
                 <div className="flex items-center gap-6 mt-4 pt-4 border-t">
                     <button onClick={handleLike} className="flex items-center gap-2">
                         <Heart size={24} className={liked ? "text-red-500 fill-red-500" : "text-gray-500"} />
@@ -204,28 +180,24 @@ export default function GeneralPostDetail() {
                 </div>
             </div>
 
-            {/* Comments */}
             <div className="px-4 pb-4">
                 <h3 className="font-bold text-gray-800 mb-3">Comments</h3>
                 <form onSubmit={handleComment} className="flex gap-2 mb-4">
-                    <img src={getProfilePic(currentUser?.profile_pic)} alt=""
+                    <img src={getMediaUrl(currentUser?.profile_pic)} alt=""
                         className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
                     <div className="flex-1 flex items-center bg-gray-100 rounded-full px-4 gap-2">
                         <input type="text" value={newComment} onChange={(e) => setNewComment(e.target.value)}
-                            placeholder="Add a comment..."
-                            className="flex-1 bg-transparent outline-none text-sm py-2" />
+                            placeholder="Add a comment..." className="flex-1 bg-transparent outline-none text-sm py-2" />
                         <button type="submit" disabled={!newComment.trim()}>
                             <Send size={16} className={newComment.trim() ? "text-teal-500" : "text-gray-300"} />
                         </button>
                     </div>
                 </form>
                 <div className="space-y-4">
-                    {comments.length === 0 && (
-                        <p className="text-center text-gray-400 text-sm py-4">No comments yet. Be the first!</p>
-                    )}
+                    {comments.length === 0 && <p className="text-center text-gray-400 text-sm py-4">No comments yet. Be the first!</p>}
                     {comments.map((comment) => (
                         <div key={comment.id} className="flex gap-3">
-                            <img src={getProfilePic(comment.user?.profile_pic)} alt={comment.user?.username}
+                            <img src={getMediaUrl(comment.user?.profile_pic)} alt={comment.user?.username}
                                 className="w-8 h-8 rounded-full object-cover flex-shrink-0 cursor-pointer"
                                 onClick={() => navigate(`/user/${comment.user?.username}`)} />
                             <div className="flex-1 bg-gray-50 rounded-2xl px-4 py-2">

@@ -21,7 +21,12 @@ export default function GeneralPostDetail() {
     const [editDescription, setEditDescription] = useState("");
     const [saving, setSaving] = useState(false);
 
+    if (!id || id === 'undefined') {
+        return <div className="text-center py-20 text-gray-500">Post not found.</div>;
+    }
+
     useEffect(() => {
+        if (!id || id === 'undefined') return;
         const fetchData = async () => {
             try {
                 const [postRes, userRes, commentsRes] = await Promise.all([
