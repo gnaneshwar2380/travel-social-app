@@ -45,6 +45,8 @@ class JoinableTripPost(models.Model):
     max_members = models.PositiveIntegerField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planning')
     created_at = models.DateTimeField(auto_now_add=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.title} - {self.destination}"
@@ -102,6 +104,8 @@ class ExperiencePost(models.Model):
     title = models.CharField(max_length=150)
     cover_image = models.ImageField(upload_to='experience/covers/')
     created_at = models.DateTimeField(auto_now_add=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     def __str__(self):  
         return self.title
@@ -135,6 +139,8 @@ class GeneralPost(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='general_posts')
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     def __str__(self): 
         return f"Post by {self.author}"
@@ -203,20 +209,44 @@ class Message(models.Model):
 
 class Notification(models.Model):
     NOTIFICATION_TYPES = [
-        ('join_request', 'Join Request'),
-        ('request_accepted', 'Request Accepted'),
         ('follow', 'Follow'),
         ('like', 'Like'),
         ('comment', 'Comment'),
+        ('join_request', 'Join Request'),
+        ('request_accepted', 'Request Accepted'),
     ]
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
-    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
-    object_id = models.PositiveIntegerField(null=True, blank=True)
-    content_object = GenericForeignKey('content_type', 'object_id')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_notifications')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    text = models.TextField(blank=True, default='')
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.sender} → {self.receiver} ({self.notification_type})"
+        return f"{self.sender} -> {self.receiver}: {self.notification_type}"
+
+class Story(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stories')
+    image = models.ImageField(upload_to='stories/')
+    caption = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"Story by {self.author.username}"
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+
+
+class StoryView(models.Model):
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='views')
+    viewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='viewed_stories')
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('story', 'viewer')

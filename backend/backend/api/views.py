@@ -10,13 +10,14 @@ from .models import (
     JoinableTripPost, JoinableTripImage, TripJoinRequest,
     TripGroup, TripGroupMember, ExperiencePost, ExperienceDay,
     ExperienceDayImage, GeneralPost, GeneralPostImage,
-    Like, Comment, SavedPost, Message, Notification, Follow
+    Like, Comment, SavedPost, Message, Notification, Follow,Story, StoryView
+
 )
 from .serializers import (
     UserSerializer, RegisterSerializer, JoinableTripPostSerializer,
     TripJoinRequestSerializer, TripGroupSerializer, ExperiencePostSerializer,
     ExperienceDaySerializer, ExperienceDayImageSerializer, GeneralPostSerializer,
-    CommentSerializer, MessageSerializer, NotificationSerializer
+    CommentSerializer, MessageSerializer, NotificationSerializer, StorySerializer
 )
 
 User = get_user_model()
@@ -81,11 +82,11 @@ class FollowToggleView(APIView):
         Notification.objects.create(
             sender=request.user,
             receiver=target,
-            notification_type='follow'
+            notification_type='follow',
+            text=f"{request.user.username} started following you"
         )
         return Response({'status': 'followed'})
-
-
+    
 class IsFollowingView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -100,7 +101,7 @@ class MatesListView(APIView):
     def get(self, request):
         following_ids = Follow.objects.filter(follower=request.user).values_list('following_id', flat=True)
         follower_ids = Follow.objects.filter(following=request.user).values_list('follower_id', flat=True)
-        mate_ids = set(following_ids) & set(follower_ids)
+        mate_ids = set(following_ids) & set(follower_ids) - {request.user.id}
         mates = User.objects.filter(id__in=mate_ids)
         serializer = UserSerializer(mates, many=True)
         return Response(serializer.data)
@@ -344,10 +345,20 @@ class LikeToggleView(APIView):
             liked = False
         else:
             liked = True
+            author = getattr(obj, 'author', None) or getattr(obj, 'creator', None)
+            if author and author != request.user:
+                Notification.objects.create(
+        sender=request.user,
+        receiver=author,
+        notification_type='like',
+        text=f"{request.user.username} liked your post",
+        content_type=ct,
+        object_id=obj.id
+    
+)
 
         total_likes = Like.objects.filter(content_type=ct, object_id=obj.id).count()
         return Response({'liked': liked, 'total_likes': total_likes})
-
 
 class SaveToggleView(APIView):
     permission_classes = [IsAuthenticated]
@@ -421,6 +432,16 @@ class CommentListCreateView(APIView):
             object_id=obj.id,
             text=request.data.get('text', '')
         )
+        author = getattr(obj, 'author', None) or getattr(obj, 'creator', None)
+        if author and author != request.user:
+           Notification.objects.create(
+        sender=request.user,
+        receiver=author,
+        notification_type='comment',
+        text=f"{request.user.username} commented on your post",
+        content_type=ct,
+        object_id=obj.id
+)
         return Response(CommentSerializer(comment).data, status=status.HTTP_201_CREATED)
 
 
@@ -457,9 +478,21 @@ class FollowingFeedView(APIView):
 
     def get(self, request):
         following_ids = Follow.objects.filter(follower=request.user).values_list('following_id', flat=True)
-        posts = ExperiencePost.objects.filter(author_id__in=following_ids).order_by('-created_at')
-        serializer = ExperiencePostSerializer(posts, many=True, context={'request': request})
-        return Response(serializer.data)
+        feed = []
+        for post in ExperiencePost.objects.filter(author_id__in=following_ids).order_by('-created_at')[:20]:
+            data = ExperiencePostSerializer(post, context={'request': request}).data
+            data['post_type'] = 'experience'
+            feed.append(data)
+        for post in GeneralPost.objects.filter(author_id__in=following_ids).order_by('-created_at')[:20]:
+            data = GeneralPostSerializer(post, context={'request': request}).data
+            data['post_type'] = 'general'
+            feed.append(data)
+        for post in JoinableTripPost.objects.filter(creator_id__in=following_ids).order_by('-created_at')[:20]:
+            data = JoinableTripPostSerializer(post, context={'request': request}).data
+            data['post_type'] = 'joinable'
+            feed.append(data)
+        feed.sort(key=lambda x: x['created_at'], reverse=True)
+        return Response(feed)
 
 
 class SearchView(APIView):
@@ -468,19 +501,29 @@ class SearchView(APIView):
     def get(self, request):
         query = request.query_params.get('q', '')
         if not query:
-            return Response({'users': [], 'posts': []})
+            return Response({'users': [], 'posts': [], 'general_posts': [], 'trips': []})
 
         users = User.objects.filter(
             Q(username__icontains=query) | Q(full_name__icontains=query)
-        )[:10]
+        ).exclude(id=request.user.id)[:10]
 
         posts = ExperiencePost.objects.filter(
             Q(title__icontains=query)
-        )[:10]
+        ).order_by('-created_at')[:10]
+
+        general_posts = GeneralPost.objects.filter(
+            Q(description__icontains=query)
+        ).order_by('-created_at')[:10]
+
+        trips = JoinableTripPost.objects.filter(
+            Q(title__icontains=query) | Q(destination__icontains=query)
+        ).order_by('-created_at')[:10]
 
         return Response({
             'users': UserSerializer(users, many=True).data,
-            'posts': ExperiencePostSerializer(posts, many=True, context={'request': request}).data
+            'posts': ExperiencePostSerializer(posts, many=True, context={'request': request}).data,
+            'general_posts': GeneralPostSerializer(general_posts, many=True, context={'request': request}).data,
+            'trips': JoinableTripPostSerializer(trips, many=True, context={'request': request}).data,
         })
 
 
@@ -489,27 +532,38 @@ class ConversationListView(APIView):
 
     def get(self, request):
         messages = Message.objects.filter(
-            Q(sender=request.user) | Q(receiver=request.user)
+            Q(sender=request.user, receiver__isnull=False) |
+            Q(receiver=request.user)
         ).order_by('-created_at')
 
         seen = set()
         conversations = []
         for msg in messages:
             other = msg.receiver if msg.sender == request.user else msg.sender
-            if other.id not in seen:
+            if other and other.id not in seen:
                 seen.add(other.id)
+                unread_count = Message.objects.filter(
+                    sender=other,
+                    receiver=request.user,
+                    is_read=False
+                ).count()
                 conversations.append({
                     'id': other.id,
                     'user': UserSerializer(other).data,
-                    'last_message': msg.content
+                    'last_message': msg.content,
+                    'unread_count': unread_count,
                 })
         return Response(conversations)
-
 
 class ChatView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
+        Message.objects.filter(
+            sender_id=user_id,
+            receiver=request.user,
+            is_read=False
+        ).update(is_read=True)
         messages = Message.objects.filter(
             Q(sender=request.user, receiver_id=user_id) |
             Q(sender_id=user_id, receiver=request.user)
@@ -535,10 +589,15 @@ class NotificationListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        notifications = Notification.objects.filter(receiver=request.user).order_by('-created_at')
-        serializer = NotificationSerializer(notifications, many=True)
-        return Response(serializer.data)
-
+        notifications = Notification.objects.filter(
+            receiver=request.user
+        ).order_by('-created_at')
+        serializer = NotificationSerializer(notifications, many=True, context={'request': request})
+        unread_count = notifications.filter(is_read=False).count()
+        return Response({
+            'notifications': serializer.data,
+            'unread_count': unread_count
+        })
 
 class MarkAllNotificationsReadView(APIView):
     permission_classes = [IsAuthenticated]
@@ -556,10 +615,21 @@ class SavedPostsListView(APIView):
         posts = []
         for item in saved:
             obj = item.content_object
+            if obj is None:
+                continue
             if isinstance(obj, ExperiencePost):
-                posts.append(ExperiencePostSerializer(obj, context={'request': request}).data)
+                data = ExperiencePostSerializer(obj, context={'request': request}).data
+                data['post_type'] = 'experience'
+                posts.append(data)
+            elif isinstance(obj, GeneralPost):
+                data = GeneralPostSerializer(obj, context={'request': request}).data
+                data['post_type'] = 'general'
+                posts.append(data)
+            elif isinstance(obj, JoinableTripPost):
+                data = JoinableTripPostSerializer(obj, context={'request': request}).data
+                data['post_type'] = 'joinable'
+                posts.append(data)
         return Response(posts)
-
 
 class UserPostsView(APIView):
     permission_classes = [IsAuthenticated]
@@ -584,7 +654,14 @@ class GeneralPostListCreateView(APIView):
 
     def post(self, request):
         description = request.data.get('description', '')
-        post = GeneralPost.objects.create(author=request.user, description=description)
+        latitude = request.data.get('latitude', None)
+        longitude = request.data.get('longitude', None)
+        post = GeneralPost.objects.create(
+            author=request.user,
+            description=description,
+            latitude=latitude,
+            longitude=longitude
+        )
         images = request.FILES.getlist('images')
         for image in images:
             GeneralPostImage.objects.create(post=post, image=image)
@@ -612,9 +689,18 @@ class JoinableTripInterestView(APIView):
         if not created:
             return Response({'message': 'Already requested', 'status': join_request.status})
 
+        Notification.objects.get_or_create(
+    sender=request.user,
+    receiver=trip.creator,
+    notification_type='join_request',
+    object_id=join_request.id,
+    defaults={
+        'text': f"{request.user.username} is interested in joining your trip '{trip.title}'",
+        'content_type': ContentType.objects.get_for_model(join_request),
+    }
+)
         return Response(TripJoinRequestSerializer(join_request).data, status=status.HTTP_201_CREATED)
-
-
+    
 class JoinableTripRequestsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -662,6 +748,7 @@ class JoinableTripAcceptView(APIView):
             sender=request.user,
             receiver=join_request.user,
             notification_type='request_accepted',
+            text=f"{request.user.username} accepted your request to join the trip '{join_request.trip.title}'",
             content_type=ContentType.objects.get_for_model(join_request),
             object_id=join_request.id
         )
@@ -697,77 +784,246 @@ class UserSearchForMessageView(APIView):
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
 
-class TripGroupListView(APIView):
+
+
+
+class UnreadCountsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        memberships = TripGroupMember.objects.filter(user=request.user).select_related('group')
-        groups = [m.group for m in memberships]
-        data = []
-        for group in groups:
-            data.append({
-                'id': group.id,
-                'name': group.name,
-                'trip_id': group.trip.id,
-                'trip_title': group.trip.title,
-                'member_count': group.group_memberships.count(),
-            })
-        return Response(data)
-
-
-class TripGroupChatView(APIView):
+        unread_messages = Message.objects.filter(
+            receiver=request.user,
+            is_read=False,
+            group__isnull=True
+        ).count()
+        unread_notifications = Notification.objects.filter(
+            receiver=request.user,
+            is_read=False
+        ).count()
+        return Response({
+            'messages': unread_messages,
+            'notifications': unread_notifications
+        })
+    
+class ProfileStatsView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, group_id):
+    def get(self, request, username):
         try:
-            group = TripGroup.objects.get(pk=group_id)
-            is_member = TripGroupMember.objects.filter(group=group, user=request.user).exists()
-            if not is_member:
-                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
-        except TripGroup.DoesNotExist:
-            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        messages = Message.objects.filter(group=group).order_by('created_at')
-        serializer = MessageSerializer(messages, many=True, context={'request': request})
-        return Response(serializer.data)
+        experience_count = ExperiencePost.objects.filter(author=user).count()
+        joinable_count = JoinableTripPost.objects.filter(creator=user).count()
+        general_count = GeneralPost.objects.filter(author=user).count()
+        total_posts = experience_count + joinable_count + general_count
 
-    def post(self, request, group_id):
+        followers_count = Follow.objects.filter(following=user).count()
+        following_count = Follow.objects.filter(follower=user).count()
+
+        total_trips = experience_count + joinable_count
+
+        # Calculate badges
+        badges = []
+        if total_trips >= 1:
+            badges.append({'icon': '✈️', 'label': 'Traveler'})
+        if total_trips >= 5:
+            badges.append({'icon': '🌍', 'label': 'Explorer'})
+        if total_trips >= 10:
+            badges.append({'icon': '🏆', 'label': 'Adventurer'})
+        if joinable_count >= 1:
+            badges.append({'icon': '👥', 'label': 'Trip Organizer'})
+        if joinable_count >= 3:
+            badges.append({'icon': '🎯', 'label': 'Trip Leader'})
+        if followers_count >= 10:
+            badges.append({'icon': '⭐', 'label': 'Rising Star'})
+        if followers_count >= 50:
+            badges.append({'icon': '🔥', 'label': 'Influencer'})
+        if total_posts >= 1:
+            badges.append({'icon': '📝', 'label': 'Storyteller'})
+
+        # Destinations visited
+        destinations = JoinableTripPost.objects.filter(
+            creator=user
+        ).values_list('destination', flat=True)
+        unique_destinations = len(set(destinations))
+
+        return Response({
+            'total_posts': total_posts,
+            'total_trips': total_trips,
+            'experience_count': experience_count,
+            'joinable_count': joinable_count,
+            'general_count': general_count,
+            'followers_count': followers_count,
+            'following_count': following_count,
+            'unique_destinations': unique_destinations,
+            'badges': badges,
+        })
+    
+class JoinableTripMyRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, trip_id):
         try:
-            group = TripGroup.objects.get(pk=group_id)
-            is_member = TripGroupMember.objects.filter(group=group, user=request.user).exists()
-            if not is_member:
-                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
-        except TripGroup.DoesNotExist:
-            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+            join_request = TripJoinRequest.objects.get(user=request.user, trip_id=trip_id)
+            return Response({'status': join_request.status, 'id': join_request.id})
+        except TripJoinRequest.DoesNotExist:
+            return Response({'status': None})
+        
+class UserFollowingView(APIView):
+    permission_classes = [IsAuthenticated]
 
-        message = Message.objects.create(
-            sender=request.user,
-            group=group,
-            content=request.data.get('content', '')
+    def get(self, request, user_id):
+        following_ids = Follow.objects.filter(follower_id=user_id).values_list('following_id', flat=True)
+        users = User.objects.filter(id__in=following_ids)
+        return Response(UserSerializer(users, many=True).data)
+
+
+class UserFollowersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, user_id):
+        follower_ids = Follow.objects.filter(following_id=user_id).values_list('follower_id', flat=True)
+        users = User.objects.filter(id__in=follower_ids)
+        return Response(UserSerializer(users, many=True).data)
+    
+class StoryListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.utils import timezone
+        following_ids = Follow.objects.filter(follower=request.user).values_list('following_id', flat=True)
+        user_ids = list(following_ids) + [request.user.id]
+        stories = Story.objects.filter(
+          author_id__in=user_ids,
+             expires_at__gt=timezone.now()
+            ).order_by('created_at')
+
+        grouped = {}
+        for story in stories:
+            uid = story.author.id
+            if uid not in grouped:
+                grouped[uid] = {
+                    'user': UserSerializer(story.author).data,
+                    'stories': [],
+                    'has_unviewed': False,
+                }
+            s_data = StorySerializer(story, context={'request': request}).data
+            grouped[uid]['stories'].append(s_data)
+            if not s_data['is_viewed']:
+                grouped[uid]['has_unviewed'] = True
+
+        return Response(list(grouped.values()))
+
+    def post(self, request):
+        from django.utils import timezone
+        from datetime import timedelta
+        image = request.FILES.get('image')
+        if not image:
+            return Response({'error': 'Image required'}, status=status.HTTP_400_BAD_REQUEST)
+        story = Story.objects.create(
+            author=request.user,
+            image=image,
+            caption=request.data.get('caption', ''),
+            expires_at=timezone.now() + timedelta(hours=24)
         )
-        return Response(MessageSerializer(message, context={'request': request}).data, status=status.HTTP_201_CREATED)
+        return Response(StorySerializer(story, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
-class TripGroupMembersView(APIView):
+class StoryViewMarkView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, group_id):
+    def post(self, request, story_id):
         try:
-            group = TripGroup.objects.get(pk=group_id)
-            is_member = TripGroupMember.objects.filter(group=group, user=request.user).exists()
-            if not is_member:
-                return Response({'error': 'Not a member'}, status=status.HTTP_403_FORBIDDEN)
-        except TripGroup.DoesNotExist:
-            return Response({'error': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+            story = Story.objects.get(pk=story_id)
+        except Story.DoesNotExist:
+            return Response({'error': 'Story not found'}, status=status.HTTP_404_NOT_FOUND)
+        StoryView.objects.get_or_create(story=story, viewer=request.user)
+        return Response({'viewed': True})
 
-        members = TripGroupMember.objects.filter(group=group).select_related('user')
-        data = [
-            {
-                'id': m.user.id,
-                'username': m.user.username,
-                'profile_pic': m.user.profile_pic.url if m.user.profile_pic else None,
-                'role': m.role,
-            }
-            for m in members
-        ]
-        return Response(data)
+class MyStoriesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.utils import timezone
+        stories = Story.objects.filter(
+            author=request.user,
+            expires_at__gt=timezone.now()
+        ).order_by('-created_at')
+        return Response(StorySerializer(stories, many=True, context={'request': request}).data)
+
+    def delete(self, request, story_id):
+        try:
+            story = Story.objects.get(pk=story_id, author=request.user)
+            story.delete()
+            return Response({'deleted': True})
+        except Story.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+class GeneralPostUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            post = GeneralPost.objects.get(pk=pk, author=request.user)
+        except GeneralPost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        description = request.data.get('description', post.description)
+        post.description = description
+        post.save()
+        return Response(GeneralPostSerializer(post, context={'request': request}).data)
+
+    def delete(self, request, pk):
+        try:
+            post = GeneralPost.objects.get(pk=pk, author=request.user)
+        except GeneralPost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        post.delete()
+        return Response({'deleted': True}, status=status.HTTP_204_NO_CONTENT)
+
+
+class JoinableTripUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            trip = JoinableTripPost.objects.get(pk=pk, creator=request.user)
+        except JoinableTripPost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = JoinableTripPostSerializer(trip, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        try:
+            trip = JoinableTripPost.objects.get(pk=pk, creator=request.user)
+        except JoinableTripPost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        trip.delete()
+        return Response({'deleted': True}, status=status.HTTP_204_NO_CONTENT)
+
+
+class ExperiencePostUpdateDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            post = ExperiencePost.objects.get(pk=pk, author=request.user)
+        except ExperiencePost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = ExperiencePostSerializer(post, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        try:
+            post = ExperiencePost.objects.get(pk=pk, author=request.user)
+        except ExperiencePost.DoesNotExist:
+            return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+        post.delete()
+        return Response({'deleted': True}, status=status.HTTP_204_NO_CONTENT)

@@ -32,7 +32,10 @@ urlpatterns = [
     path('joinable-trips/<int:trip_id>/my-request/', views.JoinableTripMyRequestView.as_view()),
     path('joinable-trips/<int:trip_id>/requests/', views.JoinableTripRequestsView.as_view()),
     path('joinable-trips/requests/<int:request_id>/approve/', views.TripJoinRequestApproveView.as_view()),
+<<<<<<< HEAD:backend/api/urls.py
     path('joinable-trips/requests/<int:request_id>/accept/', views.JoinableTripAcceptView.as_view()),
+=======
+>>>>>>> 4bee314 (Push 3 - Auto group creation on trip post, fixed image display, accept flow with notification):api/urls.py
     path('joinable-trips/requests/<int:request_id>/reject/', views.JoinableTripRejectView.as_view()),
     path('search/', views.SearchView.as_view()),
     path('saved/', views.SavedPostsListView.as_view()),
@@ -48,6 +51,7 @@ urlpatterns = [
     path('groups/', views.TripGroupListView.as_view()),
     path('groups/<int:group_id>/chat/', views.TripGroupChatView.as_view()),
     path('groups/<int:group_id>/members/', views.TripGroupMembersView.as_view()),
+<<<<<<< HEAD:backend/api/urls.py
     path('counts/', views.UnreadCountsView.as_view()),
     path('profile/<str:username>/stats/', views.ProfileStatsView.as_view()),
     path('joinable-trips/<int:trip_id>/my-request/', views.JoinableTripMyRequestView.as_view()),
@@ -59,4 +63,6 @@ path('stories/mine/', views.MyStoriesView.as_view()),
 path('general-posts/<int:pk>/edit/', views.GeneralPostUpdateDeleteView.as_view()),
 path('joinable-trips/<int:pk>/edit/', views.JoinableTripUpdateDeleteView.as_view()),
 path('posts/<int:pk>/edit/', views.ExperiencePostUpdateDeleteView.as_view()),
+=======
+>>>>>>> 4bee314 (Push 3 - Auto group creation on trip post, fixed image display, accept flow with notification):api/urls.py
 ]
