@@ -12,18 +12,27 @@ const Login = () => {
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-        const res = await loginUser({ username, password });
-        localStorage.setItem("authTokens", JSON.stringify(res.data));
-        localStorage.setItem("access_token", res.data.access);
-        localStorage.setItem("refresh_token", res.data.refresh);
-        navigate("/");
-    } catch (error) {
-        console.error("Login failed!", error);
-        alert("Login failed! Check your credentials.");
-    }
-  };
+  e.preventDefault();
+  try {
+    const res = await loginUser({ username, password });
+
+    console.log("✅ Login response:", res.data);
+
+    // ✅ STORE TOKEN PROPERLY
+    localStorage.setItem("authTokens", JSON.stringify(res.data));
+
+    console.log("✅ Stored in LS:", localStorage.getItem("authTokens"));
+
+    // ✅ SMALL DELAY (IMPORTANT)
+    setTimeout(() => {
+      navigate("/");
+    }, 100);
+
+  } catch (error) {
+    console.error("❌ Login failed!", error.response?.data);
+    alert("Login failed! Check your credentials.");
+  }
+};
 
   return (
     <div className="flex w-full min-h-screen font-sans">
