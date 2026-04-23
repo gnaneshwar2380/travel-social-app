@@ -8,7 +8,7 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// ✅ REQUEST INTERCEPTOR (FINAL)
+// ✅ REQUEST INTERCEPTOR
 api.interceptors.request.use(
   (req) => {
     try {
@@ -36,17 +36,14 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ RESPONSE INTERCEPTOR (VERY IMPORTANT)
+// ✅ RESPONSE INTERCEPTOR
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 🔥 If unauthorized → force logout
     if (error.response && error.response.status === 401) {
       console.error("🚨 401 Unauthorized - Logging out");
 
       localStorage.removeItem("authTokens");
-
-      // redirect to login
       window.location.href = "/login";
     }
 
@@ -54,17 +51,49 @@ api.interceptors.response.use(
   }
 );
 
-// AUTH APIs
-export const loginUser = (credentials) =>
-  axios.post(`${baseURL}/token/`, credentials);
+//
+// 🔥 AUTH APIs (FIXED)
+//
 
+// ✅ LOGIN
+export const loginUser = async (credentials) => {
+  try {
+    const res = await api.post("/token/", credentials);
+
+    // store tokens
+    localStorage.setItem("authTokens", JSON.stringify(res.data));
+    console.log("✅ Stored in LS:", res.data);
+
+    return res.data;
+  } catch (err) {
+    console.error("❌ Login error:", err.response?.data);
+    throw err;
+  }
+};
+
+// ✅ REGISTER (FIXED HERE)
+export const registerUser = async (data) => {
+  try {
+    console.log("📤 Register payload:", data);
+
+    const res = await api.post("/user/register/", data);
+
+    console.log("✅ Register success:", res.data);
+    return res.data;
+  } catch (err) {
+    console.error("❌ Register error:", err.response?.data);
+    throw err;
+  }
+};
+
+// ✅ REFRESH TOKEN
 export const refreshToken = (refresh) =>
-  axios.post(`${baseURL}/token/refresh/`, { refresh });
+  api.post("/token/refresh/", { refresh });
 
-export const registerUser = (data) =>
-  axios.post(`${baseURL}/user/register/`, data);
+//
+// 🔐 PROTECTED APIs
+//
 
-// PROTECTED APIs
 export const getProfile = () => api.get("/profile/");
 export const updateProfile = (formData) =>
   api.patch("/profile/", formData);
