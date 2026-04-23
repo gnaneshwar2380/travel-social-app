@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { loginUser } from '../api';
+
 import image1 from '../assets/image1.jpg';
 import image2 from '../assets/image2.jpg';
 import image3 from '../assets/image3.jpg';
-import { loginUser } from '../api';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -14,24 +15,21 @@ const Login = () => {
     e.preventDefault();
 
     try {
-      // 🔥 call API
+      // ✅ Call API (token stored inside api.js)
       const data = await loginUser({
         username: username.trim(),
         password: password.trim(),
       });
 
-      console.log("✅ Login response:", data);
+      console.log("✅ Login success:", data);
 
-      // ✅ store tokens properly
-      localStorage.setItem("authTokens", JSON.stringify(data));
-
-      console.log("✅ Stored in LS:", localStorage.getItem("authTokens"));
+      // ❌ DO NOT store again (already handled in api.js)
 
       // ✅ redirect
       navigate("/");
 
     } catch (error) {
-      console.error("❌ Login failed:", error.response?.data || error.message);
+      console.error("❌ Login failed:", error.response?.data);
 
       alert(
         error.response?.data?.detail ||
