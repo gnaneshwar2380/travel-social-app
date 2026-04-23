@@ -2,18 +2,26 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from cloudinary.models import CloudinaryField
 
+
+# ================= USER ================= #
 
 class User(AbstractUser):
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=50, blank=True)
-    profile_pic = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
-    cover_pic = models.ImageField(upload_to='background_pics/', blank=True, null=True)
+
+    # ✅ Cloudinary fields
+    profile_pic = CloudinaryField('image', blank=True, null=True)
+    cover_pic = CloudinaryField('image', blank=True, null=True)
+
     bio = models.TextField(max_length=200, blank=True)
 
     def __str__(self):
         return self.username
 
+
+# ================= FOLLOW ================= #
 
 class Follow(models.Model):
     follower = models.ForeignKey(User, on_delete=models.CASCADE, related_name='following')
@@ -27,6 +35,8 @@ class Follow(models.Model):
         return f"{self.follower} follows {self.following}"
 
 
+# ================= JOINABLE TRIPS ================= #
+
 class JoinableTripPost(models.Model):
     STATUS_CHOICES = [
         ('planning', 'Planning'),
@@ -34,6 +44,7 @@ class JoinableTripPost(models.Model):
         ('ongoing', 'Ongoing'),
         ('completed', 'Completed'),
     ]
+
     creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='joinable_trips')
     title = models.CharField(max_length=100)
     destination = models.TextField()
@@ -41,10 +52,15 @@ class JoinableTripPost(models.Model):
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     details = models.TextField()
+
     min_members = models.PositiveIntegerField(default=1)
     max_members = models.PositiveIntegerField()
+
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planning')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.title} - {self.destination}"
@@ -52,11 +68,15 @@ class JoinableTripPost(models.Model):
 
 class JoinableTripImage(models.Model):
     trip = models.ForeignKey(JoinableTripPost, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='trip_images/')
+
+    # ✅ Cloudinary
+    image = CloudinaryField('image')
 
     def __str__(self):
         return f"Image for Trip {self.trip.id}"
 
+
+# ================= JOIN REQUEST ================= #
 
 class TripJoinRequest(models.Model):
     STATUS_CHOICES = [
@@ -64,6 +84,7 @@ class TripJoinRequest(models.Model):
         ('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
     ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trip_requests')
     trip = models.ForeignKey(JoinableTripPost, on_delete=models.CASCADE, related_name='join_requests')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
@@ -75,6 +96,8 @@ class TripJoinRequest(models.Model):
     def __str__(self):
         return f"{self.user} → {self.trip} ({self.status})"
 
+
+# ================= GROUP ================= #
 
 class TripGroup(models.Model):
     trip = models.OneToOneField(JoinableTripPost, on_delete=models.CASCADE, related_name='group')
@@ -88,65 +111,86 @@ class TripGroup(models.Model):
 
 class TripGroupMember(models.Model):
     ROLE_CHOICES = [('admin', 'Admin'), ('member', 'Member')]
+
     group = models.ForeignKey(TripGroup, on_delete=models.CASCADE, related_name='group_memberships')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trip_group_memberships')
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='member')  
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='member')
     joined_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.user} in {self.group}"
 
 
+# ================= EXPERIENCE ================= #
+
 class ExperiencePost(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='experience_posts')
     title = models.CharField(max_length=150)
-    cover_image = models.ImageField(upload_to='experience/covers/')
+
+    # ✅ Cloudinary
+    cover_image = CloudinaryField('image')
+
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):  
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+
+    def __str__(self):
         return self.title
 
 
 class ExperienceDay(models.Model):
     post = models.ForeignKey(ExperiencePost, on_delete=models.CASCADE, related_name='days')
     day_number = models.PositiveIntegerField()
-    location_name = models.CharField(max_length=100, blank=True)  
+    location_name = models.CharField(max_length=100, blank=True)
     description = models.TextField()
-    date = models.DateField(null=True, blank=True)  
+    date = models.DateField(null=True, blank=True)
 
     class Meta:
         unique_together = ('post', 'day_number')
         ordering = ['day_number']
 
-    def __str__(self):  
+    def __str__(self):
         return f"{self.post.title} - Day {self.day_number}"
 
 
 class ExperienceDayImage(models.Model):
-    day = models.ForeignKey(ExperienceDay, on_delete=models.CASCADE, related_name='photos')  
-    image = models.ImageField(upload_to='experience/days/')
-    caption = models.CharField(max_length=200, blank=True) 
+    day = models.ForeignKey(ExperienceDay, on_delete=models.CASCADE, related_name='photos')
 
-    def __str__(self):  
+    # ✅ Cloudinary
+    image = CloudinaryField('image')
+
+    caption = models.CharField(max_length=200, blank=True)
+
+    def __str__(self):
         return f"Image for {self.day}"
 
+
+# ================= GENERAL POSTS ================= #
 
 class GeneralPost(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='general_posts')
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self): 
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+
+    def __str__(self):
         return f"Post by {self.author}"
 
 
 class GeneralPostImage(models.Model):
     post = models.ForeignKey(GeneralPost, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='general_posts/')
+
+    # ✅ Cloudinary
+    image = CloudinaryField('image')
 
     def __str__(self):
         return f"Image for post {self.post.id}"
 
+
+# ================= LIKE / COMMENT / SAVE ================= #
 
 class Like(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -156,7 +200,7 @@ class Like(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('user', 'content_type', 'object_id')  
+        unique_together = ('user', 'content_type', 'object_id')
         indexes = [models.Index(fields=["content_type", "object_id"])]
 
     def __str__(self):
@@ -189,10 +233,13 @@ class SavedPost(models.Model):
         return f"{self.user} saved {self.content_object}"
 
 
+# ================= CHAT ================= #
+
 class Message(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages', null=True, blank=True)
     group = models.ForeignKey(TripGroup, on_delete=models.CASCADE, related_name='messages', null=True, blank=True)
+
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
@@ -201,22 +248,58 @@ class Message(models.Model):
         return f"{self.sender.username}: {self.content[:30]}"
 
 
+# ================= NOTIFICATIONS ================= #
+
 class Notification(models.Model):
     NOTIFICATION_TYPES = [
-        ('join_request', 'Join Request'),
-        ('request_accepted', 'Request Accepted'),
         ('follow', 'Follow'),
         ('like', 'Like'),
         ('comment', 'Comment'),
+        ('join_request', 'Join Request'),
+        ('request_accepted', 'Request Accepted'),
     ]
+
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
-    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
-    object_id = models.PositiveIntegerField(null=True, blank=True)
-    content_object = GenericForeignKey('content_type', 'object_id')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_notifications')
+
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    text = models.TextField(blank=True, default='')
+
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+
     def __str__(self):
-        return f"{self.sender} → {self.receiver} ({self.notification_type})"
+        return f"{self.sender} -> {self.receiver}: {self.notification_type}"
+
+
+# ================= STORIES ================= #
+
+class Story(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stories')
+
+    # ✅ Cloudinary
+    image = CloudinaryField('image')
+
+    caption = models.CharField(max_length=200, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"Story by {self.author.username}"
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+
+
+class StoryView(models.Model):
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name='views')
+    viewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='viewed_stories')
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('story', 'viewer')

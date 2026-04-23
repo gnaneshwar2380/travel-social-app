@@ -56,12 +56,14 @@ api.interceptors.response.use(
 //
 
 // ✅ LOGIN
+// ✅ LOGIN (FINAL CLEAN)
 export const loginUser = async (credentials) => {
   try {
     const res = await api.post("/token/", credentials);
 
-    // store tokens
+    // ✅ store tokens here ONLY
     localStorage.setItem("authTokens", JSON.stringify(res.data));
+
     console.log("✅ Stored in LS:", res.data);
 
     return res.data;
